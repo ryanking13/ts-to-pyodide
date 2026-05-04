@@ -1,14 +1,20 @@
 #!/usr/bin/env node
 import { Project } from "ts-morph";
 import { convertToIR } from "./extract.js";
-import { writeFileSync, readFileSync } from "fs";
-import { resolve } from "path";
+import { Renderer } from "./renderer.js";
+import { writeFileSync, readFileSync, mkdirSync } from "fs";
+import { resolve, dirname } from "path";
 
 Error.stackTraceLimit = Infinity;
 
-function main() {
-  const projPath = process.argv.at(-2)!;
-  const outFile = process.argv.at(-1)!;
+const USAGE = `\
+Usage:
+  ts-to-pyodide render <input-dir> <output.py>   Generate Python wrappers
+  ts-to-pyodide ir <input-dir> <output.json>      Output raw IR as JSON
+
+If no subcommand is given, defaults to "render".`;
+
+function loadProject(projPath: string) {
   const tsConfigFilePath = resolve(projPath, "tsconfig.json");
   const project = new Project({
     tsConfigFilePath,
@@ -20,7 +26,57 @@ function main() {
   const globs = tsconfig["include"].map((x) => resolve(projPath, x));
   const files = project.addSourceFilesAtPaths(globs);
   files.push(...project.resolveSourceFileDependencies());
-  const result = convertToIR(files);
-  writeFileSync(outFile, JSON.stringify(result, null, 2));
+  return files;
 }
+
+function main() {
+  const args = process.argv.slice(2);
+
+  if (args.length === 0 || args[0] === "--help" || args[0] === "-h") {
+    console.log(USAGE);
+    process.exit(0);
+  }
+
+  let subcommand: string;
+  let projPath: string;
+  let outFile: string;
+
+  if (args[0] === "render" || args[0] === "ir") {
+    subcommand = args[0];
+    if (args.length < 3) {
+      console.error(`Error: ${subcommand} requires <input-dir> <output-file>`);
+      console.error(USAGE);
+      process.exit(1);
+    }
+    projPath = args[1];
+    outFile = args[2];
+  } else {
+    // Default: treat as "render <input-dir> <output-file>"
+    subcommand = "render";
+    if (args.length < 2) {
+      console.error("Error: requires <input-dir> <output-file>");
+      console.error(USAGE);
+      process.exit(1);
+    }
+    projPath = args[0];
+    outFile = args[1];
+  }
+
+  const files = loadProject(projPath);
+  const result = convertToIR(files);
+
+  if (subcommand === "ir") {
+    writeFileSync(outFile, JSON.stringify(result, null, 2));
+    console.log(`IR written to ${outFile}`);
+  } else {
+    const renderer = new Renderer();
+    const python = renderer.renderFile(result.topLevels.ifaces);
+    mkdirSync(dirname(resolve(outFile)), { recursive: true });
+    writeFileSync(outFile, python);
+    console.log(
+      `Generated ${result.topLevels.ifaces.length} classes → ${outFile}`,
+    );
+  }
+}
+
 main();
