@@ -14,6 +14,7 @@ import {
   toPythonName,
   PYTHON_RESERVED,
 } from "./naming";
+import { isValidPythonIdentifier } from "./astUtils";
 import {
   buildKnownInterfacesMap,
   isNullable,
@@ -123,6 +124,7 @@ export class Renderer {
 
     // TODO: Should we support callable interfaces somehow?
     if (!jsName || jsName === "__call__") return "";
+    if (!isValidPythonIdentifier(jsName)) return "";
 
     const sigs = method.signatures;
     if (sigs.length === 0) return "";
@@ -273,6 +275,7 @@ export class Renderer {
 
   private renderProperty(prop: PropertyIR): string {
     const jsName = prop.name;
+    if (!isValidPythonIdentifier(jsName)) return "";
     const pyName = toPythonName(jsName);
     const typeIR = prop.type;
     const isReadonly = prop.isReadonly;
