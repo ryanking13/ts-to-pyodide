@@ -122,3 +122,9 @@ Types inside `declare module "cloudflare:*"` blocks (e.g., `Pipeline<T>`, workfl
 
 ### Python Keywords
 Hardcoded in `naming.ts` as `PYTHON_KEYWORDS` (35 hard keywords) + `PYTHON_SOFT_KEYWORDS` (`_`, `case`, `match`, `type`). No builtin shadowing protection — method/property names are always behind `self.` so shadowing doesn't apply.
+
+## Common Coding conventions
+
+- Do not remove existing comments unless it is obvously redundant.
+- Keep the existing code style and formatting.
+- Always use uv for Python dependency and package management and testing.
