@@ -11,7 +11,8 @@ The IR extraction is forked from [pyodide/ts-to-python](https://github.com/pyodi
 - **Package manager**: npm
 - **Run all tests**: `npm test`
 - **Type check**: `npm run check`
-- **Run IR extraction**: `npm run run -- <input-dir> <output.json>`
+- **Render Python wrappers**: `npm run run -- render <input-dir> <output.py>`
+- **Output raw IR JSON**: `npm run run -- ir <input-dir> <output.json>`
 - **Build**: `npm run build`
 
 ## Testing
@@ -22,12 +23,13 @@ TDD approach: every feature was added as a failing test first. All tests run via
 |------|---------|
 | `tests/ir.test.ts` | IR extraction from `.d.ts` |
 | `tests/naming.test.ts` | `camelToSnake`, `sanitizePythonName`, `jsAttrAccess`, keyword completeness |
-| `tests/typeRendering.test.ts` | `renderType`, `isPromise`, `isNullable`, `needsToJs`, `needsCreateProxy` |
+| `tests/typeRendering.test.ts` | `renderType`, `isPromise`, `isNullable`, `needsToJs`, `needsCreateProxy`, `resolveKnownInterface` |
 | `tests/renderer.test.ts` | Fixture-based + inline assertion tests for `Renderer` class |
-| `tests/e2e.test.ts` | Full pipeline: `.d.ts` → IR → Python, plus known IR gap tests |
+| `tests/e2e.test.ts` | Full pipeline: `.d.ts` → IR → Python, sub-binding wrapping via `renderFile`, known IR gap tests |
 | `tests/tycheck.test.ts` | Runs `ty` type checker on generated Python using real `pyodide-py` types |
+| `tests/cli.test.ts` | CLI subcommand tests (`render`, `ir`, default, help) with self-contained fixture |
 
-Test fixtures live in `tests/fixtures/{name}/` with three files each: `input.d.ts`, `ir.json`, `expected.py`.
+Test fixtures live in `tests/fixtures/{name}/` with three files each: `input.d.ts`, `ir.json`, `expected.py`. The `sub_binding_wrap` fixture includes the full prelude and tests `renderFile` with multiple interfaces. The `cli_project` fixture is a self-contained TS project for CLI integration tests.
 
 ## Architecture
 
@@ -44,6 +46,7 @@ Test fixtures live in `tests/fixtures/{name}/` with three files each: `input.d.t
 | Change wrapper Python output | `src/renderer.ts` |
 | Change naming conventions | `src/naming.ts` |
 | Change type annotations | `src/typeRendering.ts` |
+| Change CLI behavior | `src/main.ts` |
 | Add a new wrapper feature | Add test first (TDD) in `tests/renderer.test.ts` |
 | Debug IR shape for a TS pattern | See `tests/e2e.test.ts` for how to call `convertToIR` inline |
 
@@ -60,16 +63,24 @@ Test fixtures live in `tests/fixtures/{name}/` with three files each: `input.d.t
 | `_binding` type | `Any` (not `JsProxy`) | pyodide's `JsProxy` stubs lack `__getattr__`, type checker can't resolve attribute access |
 | null/undefined | Always wrap with `_jsnull_to_none` | IR conflates null/undefined/void into `None`; safe overshoot |
 | Arg conversion | Inline in call expression | `to_js(param)` in arg list, not reassigning variable (avoids ty type errors) |
-| Generated prelude | Static, uses real pyodide imports | `from pyodide.ffi import JsProxy, create_proxy, to_js` with `jsnull` try/except guard |
+| Generated prelude | Static, uses real pyodide imports | `from pyodide.ffi import JsBuffer, JsProxy, create_proxy, to_js` with `jsnull` try/except guard |
+| Forward references | `from __future__ import annotations` | Lazy annotation evaluation avoids `NameError` when class A references class B defined later |
 | Type checking | `ty` with pyodide-py in `.venv-ty` | Real type resolution from pyodide stubs |
+| Sub-binding wrapping | Wrap properties/returns with generated class | `Videos(self._binding.videos)` when type is a known interface |
+| Buffer type mapping | `ArrayBuffer`/TypedArrays → `JsBuffer` | Pyodide's `JsBuffer` subclass; more specific than `Any` |
+| kwparams | Destructured option bags → keyword-only args | `put(key, *, expiration=None, ttl=None)` with `_opts` dict building |
+| `__getattr__` fallback | Forward unknown attrs to JsProxy | Safety net for properties/methods not in `.d.ts` |
+| `js_object` property | Expose raw JsProxy | Escape hatch for direct JsProxy access |
+| TS lib filtering | Exclude `node_modules/typescript/lib/` files | Prevents JS builtins (Object, Math, String) from generating wrappers |
 
 ## Generated Prelude
 
 Every `renderFile()` output starts with:
 
 ```python
+from __future__ import annotations
 from typing import Any, overload
-from pyodide.ffi import JsProxy, create_proxy, to_js
+from pyodide.ffi import JsBuffer, JsProxy, create_proxy, to_js
 
 def _jsnull_to_none(value: Any) -> Any:
     try:
@@ -81,7 +92,9 @@ def _jsnull_to_none(value: Any) -> Any:
     return value
 ```
 
+- `from __future__ import annotations` enables lazy annotation evaluation (PEP 563) for forward references
 - `jsnull` available in pyodide-py ≥0.29 (Python 3.13+), guarded with try/except for 3.12
+- `JsBuffer` used for `ArrayBuffer`/TypedArray type annotations
 - `create_proxy` and `to_js` imported from `pyodide.ffi`
 
 ## PyProxy Boundary Rules
@@ -99,7 +112,9 @@ Nullable returns (union containing `None`) wrap the call result. Detected by `is
 
 - **Primitives** (`str`, `bool`, `None`, `Any`, `Never`, `int | float`): rendered as-is
 - **`Promise<T>`**: kept as `Promise[T]` for async detection; the renderer unwraps it
-- **All other reference types**: rendered as `Any` — includes `ArrayBuffer`, `ReadableStream`, `KVNamespacePutOptions_iface`, etc. These types don't exist in the generated Python.
+- **Known interfaces**: when `renderFile()` is used, reference types matching generated classes render as the class name (e.g. `Videos_iface` → `Videos`). Resolved via `knownInterfaces` map on the `Renderer`.
+- **Buffer types**: `ArrayBuffer`, `ArrayBufferLike`, `ArrayBufferView`, and all TypedArrays (`Uint8Array`, `Int8Array`, `Float32Array`, etc.) render as `JsBuffer`
+- **All other reference types**: rendered as `Any` — includes `ReadableStream`, `URL`, `Headers`, `Blob`, etc. These stay as `JsProxy` at runtime in Pyodide with no automatic conversion.
 - **Generic type params** (`parameterReference`): rendered as `Any` — `T` in `Promise<T | null>` becomes `Any | None`
 - **Callable types**: rendered as `Any`
 - **Unknown constructs** (`OtherTypeIR`): rendered as `Any`
