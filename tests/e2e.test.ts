@@ -135,6 +135,26 @@ describe("e2e: sub-binding wrapping (.d.ts → IR → renderFile)", () => {
   });
 });
 
+describe("e2e: declare module extraction (.d.ts → IR → renderFile)", () => {
+  it("declare_module: class from declare module + top-level interface", () => {
+    const inputDts = readFileSync(
+      resolve(FIXTURES_DIR, "declare_module", "input.d.ts"),
+      "utf-8",
+    );
+    const expectedPy = readFileSync(
+      resolve(FIXTURES_DIR, "declare_module", "expected.py"),
+      "utf-8",
+    );
+
+    const project = makeProject();
+    project.createSourceFile("/fixture.d.ts", inputDts);
+    const result = convertToIR([project.getSourceFileOrThrow("/fixture.d.ts")]);
+
+    const output = renderer.renderFile(result.topLevels.ifaces);
+    assert.strictEqual(output, expectedPy);
+  });
+});
+
 describe("e2e: get accessors", () => {
   it("get accessors are extracted as readonly properties", () => {
     const inputDts = readFileSync(
@@ -176,5 +196,42 @@ describe("e2e: get accessors", () => {
     const nameProp = iface.properties.find((p) => p.name === "name")!;
     assert.ok(nameProp, "get-only name should be extracted");
     assert.strictEqual(nameProp.isReadonly, true, "get-only should be readonly");
+  });
+});
+
+describe("e2e: declare module extraction", () => {
+  it("extracts classes from declare module blocks", () => {
+    const project = makeProject();
+    project.createSourceFile("/fixture.d.ts", `
+      declare module "my:module" {
+          class MyService {
+              fetch(url: string): Promise<any>;
+          }
+      }
+    `);
+    const result = convertToIR([project.getSourceFileOrThrow("/fixture.d.ts")]);
+    const iface = result.topLevels.ifaces.find(
+      (i) => i.name === "MyService" || i.name === "MyService_iface",
+    );
+    assert.ok(iface, "class from declare module should be extracted");
+  });
+
+  it("ignores unquoted namespace blocks", () => {
+    const project = makeProject();
+    project.createSourceFile("/fixture.d.ts", `
+      namespace Internal {
+          class Hidden {
+              run(): void;
+          }
+      }
+      interface Visible {
+          go(): void;
+      }
+      declare var v: Visible[];
+    `);
+    const result = convertToIR([project.getSourceFileOrThrow("/fixture.d.ts")]);
+    const names = result.topLevels.ifaces.map((i) => i.name);
+    assert.ok(!names.some((n) => n.includes("Hidden")), "unquoted namespace contents should not be extracted");
+    assert.ok(names.some((n) => n.includes("Visible")), "top-level interface should be extracted");
   });
 });

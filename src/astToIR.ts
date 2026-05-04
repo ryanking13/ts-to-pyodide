@@ -1461,6 +1461,19 @@ export function convertFiles(files: SourceFile[]): ConversionResult {
   const varDecls = files.flatMap((file) => file.getVariableDeclarations());
   const funcDecls = files.flatMap((file) => file.getFunctions());
   const classDecls = files.flatMap((file) => file.getClasses());
+
+  // TODO: extract into separate .py files per module to avoid potential name collisions
+  const quotedModules = files.flatMap((file) =>
+    file
+      .getDescendantsOfKind(SyntaxKind.ModuleDeclaration)
+      .filter((m) => m.getName().startsWith('"') || m.getName().startsWith("'")),
+  );
+  for (const mod of quotedModules) {
+    varDecls.push(...mod.getVariableDeclarations());
+    funcDecls.push(...mod.getFunctions());
+    classDecls.push(...mod.getClasses());
+  }
+
   const cf = files.filter(
     (file) => file.getBaseName() === "worker-configuration.d.ts",
   );
