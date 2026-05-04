@@ -43,6 +43,7 @@ const FIXTURE_NAMES = [
   "generic_method",
   "sub_binding_property",
   "buffer_types",
+  "kwparams",
 ];
 
 describe("ty type-check fixtures", () => {
@@ -107,6 +108,36 @@ describe("ty type-check sub-binding wrapping", () => {
       ]),
       irInterface("Binding_iface", [], [
         irProperty("videos", refType("Videos_iface"), true),
+      ]),
+    ]));
+  });
+});
+
+function irSigWithKwparams(
+  params: ParamIR[],
+  kwparams: ParamIR[],
+  returns: TypeIR = { kind: "simple", text: "None" },
+): SigIR {
+  return { params, kwparams, returns };
+}
+
+describe("ty type-check kwparams", () => {
+  it("kwparams method with dict building", () => {
+    checkTy(renderer.renderFile([
+      irInterface("KV_iface", [
+        irMethod("put", [
+          irSigWithKwparams(
+            [
+              irParam("key", { kind: "simple", text: "str" }),
+              irParam("value", { kind: "simple", text: "str" }),
+            ],
+            [
+              irParam("expiration", { kind: "number" }, true),
+              irParam("metadata", { kind: "simple", text: "Any" }, true),
+            ],
+            promiseOf({ kind: "simple", text: "None" }),
+          ),
+        ]),
       ]),
     ]));
   });

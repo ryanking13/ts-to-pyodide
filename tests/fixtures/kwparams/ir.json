@@ -1,0 +1,41 @@
+{
+  "kind": "interface",
+  "name": "KVStore_iface",
+  "methods": [
+    {
+      "kind": "callable", "name": "put", "isStatic": false,
+      "signatures": [
+        {
+          "params": [
+            { "name": "key", "type": { "kind": "simple", "text": "str" }, "isOptional": false },
+            { "name": "value", "type": { "kind": "simple", "text": "str" }, "isOptional": false },
+            { "name": "options", "type": { "kind": "reference", "name": "KVPutOptions_iface", "typeArgs": [] }, "isOptional": true }
+          ],
+          "returns": { "kind": "reference", "name": "Promise", "typeArgs": [{ "kind": "simple", "text": "None" }] }
+        },
+        {
+          "params": [
+            { "name": "key", "type": { "kind": "simple", "text": "str" }, "isOptional": false },
+            { "name": "value", "type": { "kind": "simple", "text": "str" }, "isOptional": false }
+          ],
+          "kwparams": [
+            { "name": "expiration", "type": { "kind": "number" }, "isOptional": true },
+            { "name": "expirationTtl", "type": { "kind": "number" }, "isOptional": true },
+            { "name": "metadata", "type": { "kind": "simple", "text": "Any" }, "isOptional": true }
+          ],
+          "returns": { "kind": "reference", "name": "Promise", "typeArgs": [{ "kind": "simple", "text": "None" }] }
+        }
+      ]
+    },
+    {
+      "kind": "callable", "name": "get", "isStatic": false,
+      "signatures": [{
+        "params": [{ "name": "key", "type": { "kind": "simple", "text": "str" }, "isOptional": false }],
+        "returns": { "kind": "reference", "name": "Promise", "typeArgs": [{ "kind": "union", "types": [{ "kind": "simple", "text": "str" }, { "kind": "simple", "text": "None" }] }] }
+      }]
+    }
+  ],
+  "properties": [],
+  "typeParams": [],
+  "bases": []
+}

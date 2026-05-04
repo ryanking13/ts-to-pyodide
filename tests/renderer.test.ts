@@ -103,6 +103,7 @@ describe("fixture tests", () => {
     "generic_method",
     "sub_binding_property",
     "buffer_types",
+    "kwparams",
   ];
 
   for (const name of fixtures) {
@@ -607,5 +608,104 @@ describe("sub-binding wrapping", () => {
     ]);
     assert.ok(result.includes("@videos.setter"));
     assert.ok(result.includes("self._binding.videos = value"));
+  });
+});
+
+function irSigWithKwparams(
+  params: ParamIR[],
+  kwparams: ParamIR[],
+  returns: TypeIR = { kind: "simple", text: "None" },
+): SigIR {
+  return { params, kwparams, returns };
+}
+
+describe("kwparams", () => {
+  it("renders keyword-only params with * separator", () => {
+    const result = renderer.renderInterface(
+      irInterface("KV_iface", [
+        irMethod("put", [
+          irSigWithKwparams(
+            [irParam("key", { kind: "simple", text: "str" })],
+            [irParam("ttl", { kind: "number" }, true)],
+            promiseOf({ kind: "simple", text: "None" }),
+          ),
+        ]),
+      ]),
+    );
+    assert.ok(result.includes("async def put(self, key: str, *, ttl: int | float | None = None) -> None:"));
+  });
+
+  it("builds _opts dict with camelCase JS keys", () => {
+    const result = renderer.renderInterface(
+      irInterface("KV_iface", [
+        irMethod("put", [
+          irSigWithKwparams(
+            [irParam("key", { kind: "simple", text: "str" })],
+            [
+              irParam("expirationTtl", { kind: "number" }, true),
+              irParam("metadata", { kind: "simple", text: "Any" }, true),
+            ],
+          ),
+        ]),
+      ]),
+    );
+    assert.ok(result.includes('_opts: dict[str, Any] = {}'));
+    assert.ok(result.includes('if expiration_ttl is not None:'));
+    assert.ok(result.includes('_opts["expirationTtl"] = expiration_ttl'));
+    assert.ok(result.includes('if metadata is not None:'));
+    assert.ok(result.includes('_opts["metadata"] = metadata'));
+  });
+
+  it("passes _opts as last arg with to_js", () => {
+    const result = renderer.renderInterface(
+      irInterface("KV_iface", [
+        irMethod("put", [
+          irSigWithKwparams(
+            [irParam("key", { kind: "simple", text: "str" })],
+            [irParam("ttl", { kind: "number" }, true)],
+          ),
+        ]),
+      ]),
+    );
+    assert.ok(result.includes("self._binding.put(key, to_js(_opts) if _opts else None)"));
+  });
+
+  it("prefers kwparams sig over options-bag sig", () => {
+    const result = renderer.renderInterface(
+      irInterface("KV_iface", [
+        irMethod("put", [
+          irSig(
+            [
+              irParam("key", { kind: "simple", text: "str" }),
+              irParam("options", { kind: "reference", name: "Opts_iface", typeArgs: [] }, true),
+            ],
+            promiseOf({ kind: "simple", text: "None" }),
+          ),
+          irSigWithKwparams(
+            [irParam("key", { kind: "simple", text: "str" })],
+            [irParam("ttl", { kind: "number" }, true)],
+            promiseOf({ kind: "simple", text: "None" }),
+          ),
+        ]),
+      ]),
+    );
+    assert.ok(result.includes("*, ttl:"));
+    assert.ok(!result.includes("options"));
+    assert.ok(!result.includes("@overload"));
+  });
+
+  it("no kwparams falls through to normal rendering", () => {
+    const result = renderer.renderInterface(
+      irInterface("KV_iface", [
+        irMethod("get", [
+          irSig(
+            [irParam("key", { kind: "simple", text: "str" })],
+            promiseOf({ kind: "simple", text: "str" }),
+          ),
+        ]),
+      ]),
+    );
+    assert.ok(result.includes("async def get(self, key: str) -> str:"));
+    assert.ok(!result.includes("_opts"));
   });
 });

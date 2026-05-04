@@ -100,6 +100,11 @@ export class Renderer {
 
     const pyName = toPythonName(jsName);
 
+    const kwSig = sigs.find((s) => s.kwparams?.length);
+    if (kwSig) {
+      return this.renderKwparamsSig(jsName, pyName, kwSig);
+    }
+
     if (sigs.length === 1) {
       return this.renderSingleSig(jsName, pyName, sigs[0]);
     }
@@ -151,6 +156,56 @@ export class Renderer {
     const prefix = isAsync ? "async " : "";
 
     return `${prefix}def ${pyName}(${paramList}) -> ${returnType}:\n${body}`;
+  }
+
+  private renderKwparamsSig(
+    jsName: string,
+    pyName: string,
+    sig: SigIR,
+  ): string {
+    const params = sig.params;
+    const kwparams = sig.kwparams!;
+    let returns = sig.returns;
+
+    const isAsync = isPromise(returns);
+    if (isAsync) {
+      returns = unwrapPromise(returns);
+    }
+
+    const paramStrs = ["self", ...params.map((p) => this.renderParam(p))];
+    paramStrs.push("*");
+    for (const kw of kwparams) {
+      const kwName = toPythonName(kw.name);
+      const kwType = renderType(kw.type, this.knownInterfaces);
+      paramStrs.push(`${kwName}: ${kwType} | None = None`);
+    }
+
+    const paramList = paramStrs.join(", ");
+    const returnType = renderType(returns, this.knownInterfaces);
+
+    const argParts = params.map((p) => this.wrapArg(p));
+
+    const bodyLines: string[] = [];
+    bodyLines.push("    _opts: dict[str, Any] = {}");
+    for (const kw of kwparams) {
+      const kwName = toPythonName(kw.name);
+      bodyLines.push(`    if ${kwName} is not None:`);
+      bodyLines.push(`        _opts["${kw.name}"] = ${kwName}`);
+    }
+
+    argParts.push("to_js(_opts) if _opts else None");
+    const argList = argParts.join(", ");
+
+    let rawCall = jsMethodCall("self._binding", jsName, argList);
+    if (isAsync) {
+      rawCall = `await ${rawCall}`;
+    }
+
+    const returnBody = this.wrapReturn(rawCall, returns);
+    bodyLines.push(returnBody);
+
+    const prefix = isAsync ? "async " : "";
+    return `${prefix}def ${pyName}(${paramList}) -> ${returnType}:\n${bodyLines.join("\n")}`;
   }
 
   private renderOverloadStub(pyName: string, sig: SigIR): string {

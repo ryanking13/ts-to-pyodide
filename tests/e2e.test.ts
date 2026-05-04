@@ -22,6 +22,7 @@ const FIXTURE_NAMES = [
   "generic_method",
   "sub_binding_property",
   "buffer_types",
+  "kwparams",
 ];
 
 function loadFixture(name: string) {
