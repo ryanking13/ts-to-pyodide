@@ -6,8 +6,6 @@ import { tmpdir } from "os";
 import { Renderer } from "../src/renderer.js";
 import { InterfaceIR, CallableIR, SigIR, ParamIR, PropertyIR, TypeIR } from "../src/ir.js";
 
-const VENV_PATH = resolve(import.meta.dirname!, "..", ".venv-ty");
-
 const renderer = new Renderer();
 
 function checkTy(code: string): void {
@@ -15,10 +13,10 @@ function checkTy(code: string): void {
   const file = join(dir, "test.py");
   try {
     writeFileSync(file, code);
-    execSync(`ty check --python ${VENV_PATH} ${file}`, {
-      encoding: "utf-8",
-      timeout: 15_000,
-    });
+    execSync(
+      `uvx --with pyodide-py==0.28.2 --python 3.13 ty check ${file}`,
+      { encoding: "utf-8", timeout: 30_000 },
+    );
   } catch (e: any) {
     const stdout = e.stdout ?? "";
     throw new Error(
