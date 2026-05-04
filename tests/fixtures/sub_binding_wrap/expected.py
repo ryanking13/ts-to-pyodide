@@ -17,6 +17,13 @@ class D1Database:
     def __init__(self, binding: JsProxy) -> None:
         self._binding = binding
 
+    @property
+    def js_object(self) -> JsProxy:
+        return self._binding
+
+    def __getattr__(self, name: str) -> Any:
+        return getattr(self._binding, name)
+
     def prepare(self, query: str) -> D1PreparedStatement:
         return D1PreparedStatement(self._binding.prepare(query))
 
@@ -29,6 +36,13 @@ class D1PreparedStatement:
 
     def __init__(self, binding: JsProxy) -> None:
         self._binding = binding
+
+    @property
+    def js_object(self) -> JsProxy:
+        return self._binding
+
+    def __getattr__(self, name: str) -> Any:
+        return getattr(self._binding, name)
 
     async def first(self, col_name: str | None = None) -> Any:
         return await self._binding.first(col_name)

@@ -5,6 +5,13 @@ class Binding:
         self._binding = binding
 
     @property
+    def js_object(self) -> JsProxy:
+        return self._binding
+
+    def __getattr__(self, name: str) -> Any:
+        return getattr(self._binding, name)
+
+    @property
     def videos(self) -> Any:
         return self._binding.videos
     

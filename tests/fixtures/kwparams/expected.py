@@ -4,6 +4,13 @@ class KVStore:
     def __init__(self, binding: JsProxy) -> None:
         self._binding = binding
 
+    @property
+    def js_object(self) -> JsProxy:
+        return self._binding
+
+    def __getattr__(self, name: str) -> Any:
+        return getattr(self._binding, name)
+
     async def put(self, key: str, value: str, *, expiration: int | float | None = None, expiration_ttl: int | float | None = None, metadata: Any | None = None) -> None:
         _opts: dict[str, Any] = {}
         if expiration is not None:
