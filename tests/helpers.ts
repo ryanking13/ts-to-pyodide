@@ -36,8 +36,8 @@ export function typeToIR(t: TypeNode) {
 
 export function makeProject(): Project {
   return new Project({
-    tsConfigFilePath: "../input-projects/browser-dom/tsconfig.json",
-    libFolderPath: "../input-projects/browser-dom/node_modules/typescript/lib",
+    tsConfigFilePath: resolve(import.meta.dirname!, "tsconfig.test.json"),
+    libFolderPath: resolve(import.meta.dirname!, "..", "node_modules/typescript/lib"),
   });
 }
 
