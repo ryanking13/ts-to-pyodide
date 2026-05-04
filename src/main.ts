@@ -24,9 +24,10 @@ function loadProject(projPath: string) {
     readFileSync(tsConfigFilePath, { encoding: "utf8" }),
   ) as { include: string[] };
   const globs = tsconfig["include"].map((x) => resolve(projPath, x));
-  const files = project.addSourceFilesAtPaths(globs);
-  files.push(...project.resolveSourceFileDependencies());
-  return files;
+  const allFiles = project.addSourceFilesAtPaths(globs);
+  allFiles.push(...project.resolveSourceFileDependencies());
+  const tsLibPrefix = resolve(projPath, "node_modules/typescript/lib") + "/";
+  return allFiles.filter((f) => !f.getFilePath().startsWith(tsLibPrefix));
 }
 
 function main() {
