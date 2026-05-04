@@ -500,6 +500,32 @@ describe("renderFile", () => {
   });
 });
 
+describe("deduplication", () => {
+  it("deduplicates interfaces with same class name, keeps richer one", () => {
+    const result = renderer.renderFile([
+      irInterface("Response", [
+        irMethod("json", [irSig([], promiseOf({ kind: "simple", text: "Any" }))]),
+      ]),
+      irInterface("Response_iface", [
+        irMethod("json", [irSig([], promiseOf({ kind: "simple", text: "Any" }))]),
+        irMethod("text", [irSig([], promiseOf({ kind: "simple", text: "str" }))]),
+      ]),
+    ]);
+    const classCount = (result.match(/class Response:/g) || []).length;
+    assert.strictEqual(classCount, 1, "should have exactly one class Response");
+    assert.ok(result.includes("def text("), "should keep the richer interface with text()");
+  });
+
+  it("no dedup when class names differ", () => {
+    const result = renderer.renderFile([
+      irInterface("A_iface", [irMethod("f", [irSig()])]),
+      irInterface("B_iface", [irMethod("g", [irSig()])]),
+    ]);
+    assert.ok(result.includes("class A:"));
+    assert.ok(result.includes("class B:"));
+  });
+});
+
 function refType(name: string): TypeIR {
   return { kind: "reference", name, typeArgs: [] };
 }

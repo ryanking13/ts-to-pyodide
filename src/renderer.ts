@@ -50,11 +50,30 @@ export class Renderer {
   private knownInterfaces: Map<string, string> = new Map();
 
   renderFile(interfaces: InterfaceIR[]): string {
+    const deduped = this.deduplicateInterfaces(interfaces);
     this.knownInterfaces = buildKnownInterfacesMap(
-      interfaces.map((ir) => ir.name),
+      deduped.map((ir) => ir.name),
     );
-    const bodies = interfaces.map((ir) => this.renderInterface(ir));
+    const bodies = deduped.map((ir) => this.renderInterface(ir));
     return PRELUDE + "\n" + bodies.join("\n\n");
+  }
+
+  private deduplicateInterfaces(interfaces: InterfaceIR[]): InterfaceIR[] {
+    const byClassName = new Map<string, InterfaceIR>();
+    for (const ir of interfaces) {
+      const className = stripIfaceSuffix(ir.name);
+      const existing = byClassName.get(className);
+      if (!existing) {
+        byClassName.set(className, ir);
+        continue;
+      }
+      const existingSize = existing.methods.length + existing.properties.length;
+      const newSize = ir.methods.length + ir.properties.length;
+      if (newSize > existingSize) {
+        byClassName.set(className, ir);
+      }
+    }
+    return [...byClassName.values()];
   }
 
   renderInterface(ir: InterfaceIR): string {

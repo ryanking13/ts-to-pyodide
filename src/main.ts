@@ -74,9 +74,8 @@ function main() {
     const python = renderer.renderFile(result.topLevels.ifaces);
     mkdirSync(dirname(resolve(outFile)), { recursive: true });
     writeFileSync(outFile, python);
-    console.log(
-      `Generated ${result.topLevels.ifaces.length} classes → ${outFile}`,
-    );
+    const classCount = (python.match(/^class /gm) || []).length;
+    console.log(`Generated ${classCount} classes → ${outFile}`);
   }
 }
 
