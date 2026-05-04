@@ -73,29 +73,6 @@ Test fixtures live in `tests/fixtures/{name}/` with three files each: `input.d.t
 | `js_object` property | Expose raw JsProxy | Escape hatch for direct JsProxy access |
 | TS lib filtering | Exclude `node_modules/typescript/lib/` files | Prevents JS builtins (Object, Math, String) from generating wrappers |
 
-## Generated Prelude
-
-Every `renderFile()` output starts with:
-
-```python
-from __future__ import annotations
-from typing import Any, overload
-from pyodide.ffi import JsBuffer, JsProxy, create_proxy, to_js
-
-def _jsnull_to_none(value: Any) -> Any:
-    try:
-        from pyodide.ffi import jsnull
-    except ImportError:
-        return value
-    if value is jsnull:
-        return None
-    return value
-```
-
-- `from __future__ import annotations` enables lazy annotation evaluation (PEP 563) for forward references
-- `jsnull` available in pyodide-py ≥0.29 (Python 3.13+), guarded with try/except for 3.12
-- `JsBuffer` used for `ArrayBuffer`/TypedArray type annotations
-- `create_proxy` and `to_js` imported from `pyodide.ffi`
 
 ## PyProxy Boundary Rules
 
@@ -119,14 +96,6 @@ Nullable returns (union containing `None`) wrap the call result. Detected by `is
 - **Callable types**: rendered as `Any`
 - **Unknown constructs** (`OtherTypeIR`): rendered as `Any`
 
-## Known IR Gaps
-
-### `get`/`set` accessor syntax not captured
-TypeScript `get body(): ReadableStream` in interfaces uses `GetAccessor` AST nodes, which `astToIR.ts`'s `groupMembers()` doesn't handle. These properties are silently dropped from the IR. Affects: `R2ObjectBody.body`, `R2ObjectBody.bodyUsed`, `WebSocketRequestResponsePair.request/response`, many `Event` properties. Documented with a test in `e2e.test.ts`.
-
-### `declare module` blocks not extracted
-Types inside `declare module "cloudflare:*"` blocks (e.g., `Pipeline<T>`, workflow types) are not extracted by `convertFiles()`.
-
 ## Findings
 
 ### Constructor Name Discrepancies
@@ -135,8 +104,6 @@ Types inside `declare module "cloudflare:*"` blocks (e.g., `Pipeline<T>`, workfl
 - `AnalyticsEngineDataset` in .d.ts → `AnalyticsEngine` at runtime
 - `VectorizeIndex` in .d.ts → `VectorizeIndexImpl` at runtime
 
-### Python Keywords
-Hardcoded in `naming.ts` as `PYTHON_KEYWORDS` (35 hard keywords) + `PYTHON_SOFT_KEYWORDS` (`_`, `case`, `match`, `type`). No builtin shadowing protection — method/property names are always behind `self.` so shadowing doesn't apply.
 
 ## Common Coding conventions
 
