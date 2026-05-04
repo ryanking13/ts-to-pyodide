@@ -49,6 +49,9 @@ export class Renderer {
   // This is used to resolve interface types that are returned from methods
   private knownInterfaces: Map<string, string> = new Map();
 
+  // TODO: accept optional constructor name map (JSON config) to emit a
+  // CONSTRUCTOR_MAP dict for runtime dispatch (e.g. KVNamespace → KvNamespace).
+  // Needed for downstream auto-wrapping of env bindings by constructor.name.
   renderFile(interfaces: InterfaceIR[]): string {
     const deduped = this.deduplicateInterfaces(interfaces);
     this.knownInterfaces = buildKnownInterfacesMap(
@@ -330,6 +333,10 @@ export class Renderer {
     return `${name}: ${typeStr}`;
   }
 
+  // TODO: fluent/builder pattern — when a non-static instance method returns its
+  // own interface type (e.g. HTMLRewriter.on() → HTMLRewriter), emit `return self`
+  // instead of wrapping in a new instance. However, we don't know whether the
+  // function expects cloning or not...
   private wrapReturn(rawCall: string, returns: TypeIR): string {
     const wrapperClass = resolveKnownInterface(returns, this.knownInterfaces);
     const nullable = isNullable(returns);
