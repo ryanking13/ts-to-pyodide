@@ -101,7 +101,9 @@ export function buildKnownInterfacesMap(
 ): Map<string, string> {
   const map = new Map<string, string>();
   for (const name of names) {
-    map.set(name, stripIfaceSuffix(name));
+    const className = stripIfaceSuffix(name);
+    map.set(name, className);
+    map.set(className, className);
   }
   return map;
 }
