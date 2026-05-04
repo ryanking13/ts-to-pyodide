@@ -23,6 +23,7 @@ const FIXTURE_NAMES = [
   "sub_binding_property",
   "buffer_types",
   "kwparams",
+  "get_accessor",
 ];
 
 function loadFixture(name: string) {
@@ -134,8 +135,8 @@ describe("e2e: sub-binding wrapping (.d.ts → IR → renderFile)", () => {
   });
 });
 
-describe("e2e: known IR gaps", () => {
-  it("get accessors are dropped from IR (known limitation)", () => {
+describe("e2e: get accessors", () => {
+  it("get accessors are extracted as readonly properties", () => {
     const inputDts = readFileSync(
       resolve(FIXTURES_DIR, "get_accessor", "input.d.ts"),
       "utf-8",
@@ -147,10 +148,33 @@ describe("e2e: known IR gaps", () => {
     const iface = findIface(result, "ObjectBody_iface");
 
     const propNames = iface.properties.map((p) => p.name);
-    assert.ok(
-      !propNames.includes("body"),
-      "get body() is missing from IR (known gap — GetAccessor not handled by astToIR)",
-    );
+    assert.ok(propNames.includes("body"), "get body() should be extracted");
+    assert.ok(propNames.includes("bodyUsed"), "get bodyUsed() should be extracted");
     assert.ok(propNames.includes("etag"), "readonly etag should be present");
+
+    const bodyProp = iface.properties.find((p) => p.name === "body")!;
+    assert.strictEqual(bodyProp.isReadonly, true, "get-only accessor should be readonly");
+  });
+
+  it("get + set accessor pair produces writable property", () => {
+    const project = makeProject();
+    project.createSourceFile("/fixture.d.ts", `
+      interface Config {
+          get value(): string;
+          set value(v: string);
+          get name(): string;
+      }
+      declare var c: Config[];
+    `);
+    const result = convertToIR([project.getSourceFileOrThrow("/fixture.d.ts")]);
+    const iface = findIface(result, "Config_iface");
+
+    const valueProp = iface.properties.find((p) => p.name === "value")!;
+    assert.ok(valueProp, "get/set value should be extracted");
+    assert.strictEqual(valueProp.isReadonly, false, "get+set should be writable");
+
+    const nameProp = iface.properties.find((p) => p.name === "name")!;
+    assert.ok(nameProp, "get-only name should be extracted");
+    assert.strictEqual(nameProp.isReadonly, true, "get-only should be readonly");
   });
 });

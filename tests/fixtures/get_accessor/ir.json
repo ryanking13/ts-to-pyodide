@@ -1,0 +1,20 @@
+{
+  "kind": "interface",
+  "name": "ObjectBody_iface",
+  "methods": [
+    {
+      "kind": "callable", "name": "text", "isStatic": false,
+      "signatures": [{
+        "params": [],
+        "returns": { "kind": "reference", "name": "Promise", "typeArgs": [{ "kind": "simple", "text": "str" }] }
+      }]
+    }
+  ],
+  "properties": [
+    { "name": "etag", "type": { "kind": "simple", "text": "str" }, "isReadonly": true, "isOptional": false, "isStatic": false },
+    { "name": "body", "type": { "kind": "simple", "text": "str" }, "isReadonly": true, "isOptional": false, "isStatic": false },
+    { "name": "bodyUsed", "type": { "kind": "simple", "text": "bool" }, "isReadonly": true, "isOptional": false, "isStatic": false }
+  ],
+  "typeParams": [],
+  "bases": []
+}

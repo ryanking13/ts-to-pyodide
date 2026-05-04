@@ -992,6 +992,29 @@ export class Converter {
     return { name, type, isOptional, isStatic, isReadonly };
   }
 
+  extractAccessorProperties(members: Node[]): PropertyIR[] {
+    const getters = members.filter((m) => m.isKind(SyntaxKind.GetAccessor));
+    const setterNames = new Set(
+      members
+        .filter((m) => m.isKind(SyntaxKind.SetAccessor))
+        .map((m) => m.asKindOrThrow(SyntaxKind.SetAccessor).getName()),
+    );
+    const props: PropertyIR[] = [];
+    for (const getter of getters) {
+      const decl = getter.asKindOrThrow(SyntaxKind.GetAccessor);
+      const name = decl.getName();
+      if (!isValidPythonIdentifier(name)) continue;
+      const returnTypeNode = decl.getReturnTypeNode();
+      if (!returnTypeNode) continue;
+      this.pushNameContext(name);
+      const type = this.typeToIR(returnTypeNode);
+      this.popNameContext();
+      const isReadonly = !setterNames.has(name);
+      props.push({ name, type, isOptional: false, isStatic: false, isReadonly });
+    }
+    return props;
+  }
+
   topLevelInterfaceToIR(
     name: string,
     defs: InterfaceDeclaration[],
@@ -1131,6 +1154,7 @@ export class Converter {
         ),
         isStatic: false,
       });
+      const accessorProps = this.extractAccessorProperties(members);
       const irProps = ([] as PropertyIR[]).concat(
         astProperties
           .filter((x) => isValidPythonIdentifier(x.getName()))
@@ -1138,6 +1162,7 @@ export class Converter {
         staticAstProperties
           .filter((x) => isValidPythonIdentifier(x.getName()))
           .map((prop) => this.propertySignatureToIR(prop, true)),
+        accessorProps,
       );
       const props = uniqBy(irProps, ({ name }) => name);
       return {

@@ -104,6 +104,7 @@ describe("fixture tests", () => {
     "sub_binding_property",
     "buffer_types",
     "kwparams",
+    "get_accessor",
   ];
 
   for (const name of fixtures) {

@@ -44,6 +44,7 @@ const FIXTURE_NAMES = [
   "sub_binding_property",
   "buffer_types",
   "kwparams",
+  "get_accessor",
 ];
 
 describe("ty type-check fixtures", () => {
