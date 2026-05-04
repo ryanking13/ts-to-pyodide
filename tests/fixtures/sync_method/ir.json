@@ -1,0 +1,20 @@
+{
+  "kind": "interface",
+  "name": "Counter_iface",
+  "methods": [
+    {
+      "kind": "callable",
+      "name": "increment",
+      "signatures": [
+        {
+          "params": [],
+          "returns": { "kind": "simple", "text": "None" }
+        }
+      ],
+      "isStatic": false
+    }
+  ],
+  "properties": [],
+  "typeParams": [],
+  "bases": []
+}

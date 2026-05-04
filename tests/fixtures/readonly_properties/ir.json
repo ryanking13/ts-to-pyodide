@@ -1,0 +1,11 @@
+{
+  "kind": "interface",
+  "name": "Hyperdrive_iface",
+  "methods": [],
+  "properties": [
+    { "name": "host", "type": { "kind": "simple", "text": "str" }, "isReadonly": true, "isOptional": false, "isStatic": false },
+    { "name": "port", "type": { "kind": "number" }, "isReadonly": true, "isOptional": false, "isStatic": false }
+  ],
+  "typeParams": [],
+  "bases": []
+}

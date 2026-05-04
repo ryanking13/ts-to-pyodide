@@ -1,0 +1,23 @@
+{
+  "kind": "interface",
+  "name": "Calculator_iface",
+  "methods": [
+    {
+      "kind": "callable",
+      "name": "add",
+      "signatures": [
+        {
+          "params": [
+            { "name": "a", "type": { "kind": "number" }, "isOptional": false },
+            { "name": "b", "type": { "kind": "number" }, "isOptional": false }
+          ],
+          "returns": { "kind": "number" }
+        }
+      ],
+      "isStatic": false
+    }
+  ],
+  "properties": [],
+  "typeParams": [],
+  "bases": []
+}

@@ -1,0 +1,22 @@
+{
+  "kind": "interface",
+  "name": "Greeter_iface",
+  "methods": [
+    {
+      "kind": "callable",
+      "name": "greet",
+      "signatures": [
+        {
+          "params": [
+            { "name": "name", "type": { "kind": "simple", "text": "str" }, "isOptional": false }
+          ],
+          "returns": { "kind": "simple", "text": "str" }
+        }
+      ],
+      "isStatic": false
+    }
+  ],
+  "properties": [],
+  "typeParams": [],
+  "bases": []
+}

@@ -1,0 +1,7 @@
+node_modules
+dist
+generated
+
+**/__pycache__
+CODEBASE_TOUR.md
+PLAN.md

@@ -1,0 +1,200 @@
+import { Variance, reverseVariance } from "./types.js";
+import { CallableIR, InterfaceIR, TypeIR, simpleType } from "./ir.js";
+import { typeIRToString } from "./irToString.js";
+
+import { split2 } from "./groupBy.js";
+
+export const BUILTIN_NAMES = [
+  "Iterable",
+  "Iterable_iface",
+  "Iterator",
+  "Iterator_iface",
+  "IterableIterator",
+  "IterableIterator_iface",
+  "AsyncIterableIterator",
+  "AsyncIterableIterator_iface",
+  "ArrayLike",
+  "ArrayLike_iface",
+  "ConcatArray",
+  "PromiseLike",
+  "PromiseLike_iface",
+  "Promise",
+  "Map",
+  "ReadonlyMap",
+  "Readonly",
+  "Record",
+  "Dispatcher",
+  "HeadersInit",
+];
+
+const EXTRA_BASES: Record<string, string[]> = {
+  Error_iface: ["Exception"],
+  Uint8Array_iface: ["JsBuffer"],
+  ArrayBuffer_iface: ["JsBuffer"],
+  Array_iface: ["JsArray[T]"],
+  Headers_iface: ["JsIterable[tuple[str, str]]"],
+  HTMLCollectionBase_iface: ["JsArray[Element]"],
+  NodeList_iface: ["JsArray[Node]"],
+};
+
+export function getExtraBases(name: string): string[] {
+  return EXTRA_BASES[name] || [];
+}
+
+export const CLASS_TYPE_IGNORES = "";
+export let METHOD_TYPE_IGNORES = "";
+export let PROPERTY_TYPE_IGNORES = "";
+
+export const TYPE_TEXT_MAP: Record<string, string> = {
+  number: "int | float",
+  bigint: "int",
+  boolean: "bool",
+  string: "str",
+  void: "None",
+  undefined: "None",
+  null: "None",
+  symbol: "Symbol",
+  any: "Any",
+  unknown: "Any",
+  object: "Any",
+  never: "Never",
+  "Window & typeof globalThis": "Any",
+};
+
+export function adjustInterfaceIR(cls: InterfaceIR): void {
+  if (cls.name === "Response") {
+    let meth: CallableIR | undefined;
+    for (const curMeth of cls.methods) {
+      if (curMeth.name === "json") {
+        meth = curMeth;
+        break;
+      }
+    }
+    if (!meth) {
+      throw new Error("Cannot find Response.json");
+    }
+    meth.signatures.push({
+      params: [],
+      returns: simpleType("Future[Any]"),
+    });
+  }
+  if (
+    ["Response_iface", "Response", "String", "DataView"].includes(cls.name) ||
+    (cls.name.includes("Array") && !cls.name.includes("Float"))
+  ) {
+    cls.numberType = "int";
+  }
+}
+
+export function adjustFunction({ name, signatures }: CallableIR): void {
+  if (["setTimeout", "setInterval"].includes(name!)) {
+    for (const sig of signatures) {
+      sig.returns = simpleType("int | JsProxy");
+    }
+  }
+  if (["clearTimeout", "clearInterval"].includes(name!)) {
+    for (const sig of signatures) {
+      sig.params[0].type = simpleType("int | JsProxy");
+    }
+  }
+  if (name === "fromEntries") {
+    for (const sig of signatures) {
+      sig.returns = simpleType("JsProxy");
+    }
+  }
+}
+
+export function handleBuiltinBases(nameToCls: Map<string, InterfaceIR>): void {
+  for (const val of nameToCls.values()) {
+    let iteratorBase;
+    [[iteratorBase], val.bases] = split2(
+      val.bases,
+      (x) => x.name === "Iterator_iface",
+    );
+    if (iteratorBase) {
+      val.extraBases ??= [];
+      val.extraBases.push(
+        typeReferenceSubsitutions(
+          iteratorBase.name,
+          iteratorBase.typeArgs,
+          Variance.covar,
+        )!,
+      );
+    }
+  }
+}
+
+export function typeReferenceSubsitutions(
+  name: string,
+  typeArgs: TypeIR[],
+  variance: Variance,
+): string | undefined {
+  if (name.endsWith("_iface")) {
+    name = name.slice(0, -"_iface".length);
+  }
+  if (name === "URL") {
+    return "URL_";
+  }
+  if (name === "Function") {
+    return "Callable[..., Any]";
+  }
+  if (
+    name.startsWith("Intl") ||
+    ["console.ConsoleConstructor", "NodeJS.CallSite", "FlatArray"].includes(
+      name,
+    )
+  ) {
+    return "Any";
+  }
+
+  const argone = () => "[" + typeIRToString(typeArgs[0], { variance }) + "]";
+  const args = () => typeArgs.map((arg) => typeIRToString(arg, { variance }));
+  const fmtArgs = () => {
+    const a = args();
+    if (a.length) {
+      return `[${a.join(", ")}]`;
+    }
+    return "";
+  };
+
+  if (["Exclude", "Readonly"].includes(name)) {
+    return args()[0];
+  }
+  if (name === "Promise") {
+    return "Future" + fmtArgs();
+  }
+  const async = name.includes("Async") ? "Async" : "";
+  if (name === "Iterable" || name === "AsyncIterable") {
+    if (variance === Variance.contra) {
+      return `Py${async}Iterable` + argone();
+    } else {
+      return `Js${async}Iterable` + argone();
+    }
+  }
+  if (name === "Iterator" || name === "AsyncIterator") {
+    const T = typeIRToString(typeArgs[0], { variance });
+    const TReturn = typeIRToString(typeArgs[1], { variance });
+    const TNext = typeIRToString(typeArgs[2], {
+      variance: reverseVariance(variance),
+    });
+    const args = `[${T}, ${TNext}, ${TReturn}]`;
+    if (variance === Variance.contra) {
+      return `Py${async}Generator` + args;
+    } else {
+      if (TNext === "None" && TReturn === "Any") {
+        return `Js${async}Iterator[${T}]`;
+      }
+      return `Js${async}Generator` + args;
+    }
+  }
+  if (name === "IterableIterator" || name === "AsyncIterableIterator") {
+    if (variance === Variance.contra) {
+      return `Py${async}Iterator` + argone();
+    } else {
+      return `Js${async}Iterator` + argone();
+    }
+  }
+  if (name === "Array") {
+    return "ArrayLike_iface" + fmtArgs();
+  }
+}

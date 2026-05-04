@@ -1,0 +1,36 @@
+{
+  "kind": "interface",
+  "name": "Stmt_iface",
+  "methods": [
+    {
+      "kind": "callable", "name": "first", "isStatic": false,
+      "signatures": [
+        {
+          "params": [{ "name": "colName", "type": { "kind": "simple", "text": "str" }, "isOptional": false }],
+          "returns": { "kind": "reference", "name": "Promise", "typeArgs": [
+            { "kind": "union", "types": [{ "kind": "parameterReference", "name": "T" }, { "kind": "simple", "text": "None" }] }
+          ]},
+          "typeParams": [{ "name": "T", "default": { "kind": "simple", "text": "Any" } }]
+        },
+        {
+          "params": [],
+          "returns": { "kind": "reference", "name": "Promise", "typeArgs": [
+            { "kind": "union", "types": [{ "kind": "parameterReference", "name": "T" }, { "kind": "simple", "text": "None" }] }
+          ]},
+          "typeParams": [{ "name": "T" }]
+        }
+      ]
+    },
+    {
+      "kind": "callable", "name": "run", "isStatic": false,
+      "signatures": [{
+        "params": [],
+        "returns": { "kind": "reference", "name": "Promise", "typeArgs": [{ "kind": "simple", "text": "Any" }] },
+        "typeParams": [{ "name": "T" }]
+      }]
+    }
+  ],
+  "properties": [],
+  "typeParams": [],
+  "bases": []
+}

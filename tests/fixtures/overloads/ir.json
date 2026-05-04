@@ -1,0 +1,26 @@
+{
+  "kind": "interface",
+  "name": "D1PreparedStatement_iface",
+  "methods": [
+    {
+      "kind": "callable", "name": "first", "isStatic": false,
+      "signatures": [
+        {
+          "params": [{ "name": "colName", "type": { "kind": "simple", "text": "str" }, "isOptional": false }],
+          "returns": { "kind": "reference", "name": "Promise", "typeArgs": [
+            { "kind": "union", "types": [{ "kind": "simple", "text": "Any" }, { "kind": "simple", "text": "None" }] }
+          ]}
+        },
+        {
+          "params": [],
+          "returns": { "kind": "reference", "name": "Promise", "typeArgs": [
+            { "kind": "union", "types": [{ "kind": "simple", "text": "Any" }, { "kind": "simple", "text": "None" }] }
+          ]}
+        }
+      ]
+    }
+  ],
+  "properties": [],
+  "typeParams": [],
+  "bases": []
+}

@@ -1,0 +1,19 @@
+{
+  "kind": "interface",
+  "name": "Binding_iface",
+  "methods": [
+    {
+      "kind": "callable", "name": "fetch", "isStatic": false,
+      "signatures": [{
+        "params": [{ "name": "url", "type": { "kind": "simple", "text": "str" }, "isOptional": false }],
+        "returns": { "kind": "reference", "name": "Promise", "typeArgs": [{ "kind": "simple", "text": "Any" }] }
+      }]
+    }
+  ],
+  "properties": [
+    { "name": "videos", "type": { "kind": "reference", "name": "Videos_iface", "typeArgs": [] }, "isReadonly": false, "isOptional": false, "isStatic": false },
+    { "name": "name", "type": { "kind": "simple", "text": "str" }, "isReadonly": true, "isOptional": false, "isStatic": false }
+  ],
+  "typeParams": [],
+  "bases": []
+}

@@ -1,0 +1,20 @@
+{
+  "kind": "interface",
+  "name": "Hyperdrive_iface",
+  "methods": [
+    {
+      "kind": "callable", "name": "connect", "isStatic": false,
+      "signatures": [{ "params": [], "returns": { "kind": "simple", "text": "Any" } }]
+    }
+  ],
+  "properties": [
+    { "name": "connectionString", "type": { "kind": "simple", "text": "str" }, "isReadonly": true, "isOptional": false, "isStatic": false },
+    { "name": "host", "type": { "kind": "simple", "text": "str" }, "isReadonly": true, "isOptional": false, "isStatic": false },
+    { "name": "port", "type": { "kind": "number" }, "isReadonly": true, "isOptional": false, "isStatic": false },
+    { "name": "user", "type": { "kind": "simple", "text": "str" }, "isReadonly": true, "isOptional": false, "isStatic": false },
+    { "name": "password", "type": { "kind": "simple", "text": "str" }, "isReadonly": true, "isOptional": false, "isStatic": false },
+    { "name": "database", "type": { "kind": "simple", "text": "str" }, "isReadonly": true, "isOptional": false, "isStatic": false }
+  ],
+  "typeParams": [],
+  "bases": []
+}

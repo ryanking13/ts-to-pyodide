@@ -1,0 +1,26 @@
+{
+  "kind": "interface",
+  "name": "KV_iface",
+  "methods": [
+    {
+      "kind": "callable",
+      "name": "delete",
+      "signatures": [
+        {
+          "params": [
+            { "name": "key", "type": { "kind": "simple", "text": "str" }, "isOptional": false }
+          ],
+          "returns": {
+            "kind": "reference",
+            "name": "Promise",
+            "typeArgs": [{ "kind": "simple", "text": "None" }]
+          }
+        }
+      ],
+      "isStatic": false
+    }
+  ],
+  "properties": [],
+  "typeParams": [],
+  "bases": []
+}

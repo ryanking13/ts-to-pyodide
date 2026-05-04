@@ -1,0 +1,23 @@
+{
+  "name": "ts-to-pyodide",
+  "version": "0.1.0",
+  "description": "Generate Python runtime wrappers from TypeScript .d.ts files for Pyodide",
+  "license": "ISC",
+  "type": "module",
+  "bin": "dist/main.js",
+  "scripts": {
+    "test": "node --test --import=tsx 'tests/**/*.test.ts'",
+    "run": "tsx src/main.ts",
+    "build": "npx tsc",
+    "check": "npx tsc -p tsconfig-check.json"
+  },
+  "dependencies": {
+    "ts-morph": "^27.0.0",
+    "tslog": "^4.10.2",
+    "tsx": "^4.6.2"
+  },
+  "devDependencies": {
+    "@types/node": "^24.3.1",
+    "typescript": "^5.9.2"
+  }
+}
