@@ -112,6 +112,26 @@ describe("e2e: .d.ts → IR → Python (full pipeline)", () => {
   }
 });
 
+describe("e2e: sub-binding wrapping (.d.ts → IR → renderFile)", () => {
+  it("sub_binding_wrap: method returning known interface wraps with class constructor", () => {
+    const inputDts = readFileSync(
+      resolve(FIXTURES_DIR, "sub_binding_wrap", "input.d.ts"),
+      "utf-8",
+    );
+    const expectedPy = readFileSync(
+      resolve(FIXTURES_DIR, "sub_binding_wrap", "expected.py"),
+      "utf-8",
+    );
+
+    const project = makeProject();
+    project.createSourceFile("/fixture.d.ts", inputDts);
+    const result = convertToIR([project.getSourceFileOrThrow("/fixture.d.ts")]);
+
+    const output = renderer.renderFile(result.topLevels.ifaces);
+    assert.strictEqual(output, expectedPy);
+  });
+});
+
 describe("e2e: known IR gaps", () => {
   it("get accessors are dropped from IR (known limitation)", () => {
     const inputDts = readFileSync(

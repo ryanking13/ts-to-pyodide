@@ -1,42 +1,90 @@
 import { TypeIR } from "./ir";
+import { logger } from "./logger";
+import { stripIfaceSuffix } from "./naming";
 
 const PRIMITIVE_SIMPLE_TYPES = new Set(["str", "bool", "None", "Any", "Never"]);
 
-export function renderType(ir: TypeIR): string {
+export function renderType(
+  ir: TypeIR,
+  knownInterfaces?: Map<string, string>,
+): string {
   switch (ir.kind) {
     case "simple":
       return ir.text;
     case "number":
       return "int | float";
     case "union":
-      return ir.types.map(renderType).join(" | ");
+      return ir.types.map((t) => renderType(t, knownInterfaces)).join(" | ");
     case "reference": {
       if (ir.name.startsWith("Promise")) {
         const args = ir.typeArgs;
         if (args.length > 0) {
-          return `${ir.name}[${args.map(renderType).join(", ")}]`;
+          return `${ir.name}[${args.map((t) => renderType(t, knownInterfaces)).join(", ")}]`;
         }
         return ir.name;
       }
+      const resolved = knownInterfaces?.get(ir.name);
+      if (resolved) return resolved;
       return "Any";
     }
     case "array":
-      return `list[${renderType(ir.type)}]`;
+      return `list[${renderType(ir.type, knownInterfaces)}]`;
     case "tuple":
-      return `tuple[${ir.types.map(renderType).join(", ")}]`;
+      return `tuple[${ir.types.map((t) => renderType(t, knownInterfaces)).join(", ")}]`;
     case "other":
       return "Any";
     case "paren":
-      return `(${renderType(ir.type)})`;
+      return `(${renderType(ir.type, knownInterfaces)})`;
     case "parameterReference":
       return "Any";
     case "operator":
-      return renderType(ir.type);
+      return renderType(ir.type, knownInterfaces);
     case "spread":
-      return `*${renderType(ir.type)}`;
+      return `*${renderType(ir.type, knownInterfaces)}`;
     case "callable":
       return "Any";
   }
+}
+
+export function resolveKnownInterface(
+  ir: TypeIR,
+  knownInterfaces: Map<string, string>,
+): string | undefined {
+  if (ir.kind === "reference") {
+    return knownInterfaces.get(ir.name);
+  }
+  // TODO: unions with multiple known interfaces (e.g. Videos_iface | Audio_iface)
+  // need runtime dispatch (constructor.name check) to pick the right wrapper class.
+  if (ir.kind === "union") {
+    const nonNone = ir.types.filter(
+      (t) => !(t.kind === "simple" && t.text === "None"),
+    );
+    if (nonNone.length === 1 && nonNone[0].kind === "reference") {
+      return knownInterfaces.get(nonNone[0].name);
+    }
+    const knownInUnion = nonNone.filter(
+      (t) => t.kind === "reference" && knownInterfaces.has(t.name),
+    );
+    if (knownInUnion.length > 1) {
+      const names = knownInUnion.map(
+        (t) => t.kind === "reference" ? t.name : "",
+      );
+      logger.warn(
+        `Union has multiple known interfaces [${names.join(", ")}], cannot auto-wrap`,
+      );
+    }
+  }
+  return undefined;
+}
+
+export function buildKnownInterfacesMap(
+  names: string[],
+): Map<string, string> {
+  const map = new Map<string, string>();
+  for (const name of names) {
+    map.set(name, stripIfaceSuffix(name));
+  }
+  return map;
 }
 
 export function isPromise(ir: TypeIR): boolean {

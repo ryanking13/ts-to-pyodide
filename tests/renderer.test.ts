@@ -497,3 +497,114 @@ describe("renderFile", () => {
     assert.strictEqual(classCount, 2);
   });
 });
+
+function refType(name: string): TypeIR {
+  return { kind: "reference", name, typeArgs: [] };
+}
+
+describe("sub-binding wrapping", () => {
+  it("property typed as known interface wraps with class constructor", () => {
+    const result = renderer.renderFile([
+      irInterface("Videos_iface", [
+        irMethod("list", [irSig([], promiseOf({ kind: "simple", text: "Any" }))]),
+      ]),
+      irInterface("Binding_iface", [], [
+        irProperty("videos", refType("Videos_iface")),
+      ]),
+    ]);
+    assert.ok(result.includes("def videos(self) -> Videos:"));
+    assert.ok(result.includes("return Videos(self._binding.videos)"));
+  });
+
+  it("property typed as unknown interface stays as Any", () => {
+    const result = renderer.renderFile([
+      irInterface("Binding_iface", [], [
+        irProperty("unknown", refType("NotRegistered_iface")),
+      ]),
+    ]);
+    assert.ok(result.includes("def unknown(self) -> Any:"));
+    assert.ok(result.includes("return self._binding.unknown"));
+    assert.ok(!result.includes("NotRegistered"));
+  });
+
+  it("method returning known interface wraps return value", () => {
+    const result = renderer.renderFile([
+      irInterface("Stmt_iface", [
+        irMethod("run", [irSig([], { kind: "simple", text: "Any" })]),
+      ]),
+      irInterface("DB_iface", [
+        irMethod("prepare", [
+          irSig(
+            [irParam("query", { kind: "simple", text: "str" })],
+            refType("Stmt_iface"),
+          ),
+        ]),
+      ]),
+    ]);
+    assert.ok(result.includes("def prepare(self, query: str) -> Stmt:"));
+    assert.ok(result.includes("return Stmt(self._binding.prepare(query))"));
+  });
+
+  it("async method returning known interface wraps await result", () => {
+    const result = renderer.renderFile([
+      irInterface("Session_iface"),
+      irInterface("DB_iface", [
+        irMethod("connect", [
+          irSig([], promiseOf(refType("Session_iface"))),
+        ]),
+      ]),
+    ]);
+    assert.ok(result.includes("async def connect(self) -> Session:"));
+    assert.ok(result.includes("return Session(await self._binding.connect())"));
+  });
+
+  it("nullable known interface property uses conditional wrapping", () => {
+    const result = renderer.renderFile([
+      irInterface("Meta_iface"),
+      irInterface("Obj_iface", [], [
+        irProperty("meta", refType("Meta_iface"), true, true),
+      ]),
+    ]);
+    assert.ok(result.includes("def meta(self) -> Meta | None:"));
+    assert.ok(result.includes("_v = self._binding.meta"));
+    assert.ok(result.includes("return Meta(_v) if _v is not None else None"));
+  });
+
+  it("nullable known interface method return uses conditional wrapping", () => {
+    const result = renderer.renderFile([
+      irInterface("Item_iface"),
+      irInterface("Store_iface", [
+        irMethod("find", [
+          irSig(
+            [irParam("id", { kind: "simple", text: "str" })],
+            nullable(refType("Item_iface")),
+          ),
+        ]),
+      ]),
+    ]);
+    assert.ok(result.includes("def find(self, id: str) -> Item | None:"));
+    assert.ok(result.includes("_v = self._binding.find(id)"));
+    assert.ok(result.includes("return Item(_v) if _v is not None else None"));
+  });
+
+  it("renderInterface without renderFile does not wrap (backward compat)", () => {
+    const result = renderer.renderInterface(
+      irInterface("Binding_iface", [], [
+        irProperty("videos", refType("Videos_iface")),
+      ]),
+    );
+    assert.ok(result.includes("def videos(self) -> Any:"));
+    assert.ok(!result.includes("Videos("));
+  });
+
+  it("setter stays simple even for known interface properties", () => {
+    const result = renderer.renderFile([
+      irInterface("Videos_iface"),
+      irInterface("Binding_iface", [], [
+        irProperty("videos", refType("Videos_iface")),
+      ]),
+    ]);
+    assert.ok(result.includes("@videos.setter"));
+    assert.ok(result.includes("self._binding.videos = value"));
+  });
+});

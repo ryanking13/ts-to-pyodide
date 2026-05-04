@@ -15,16 +15,19 @@ import {
   PYTHON_RESERVED,
 } from "./naming";
 import {
+  buildKnownInterfacesMap,
   isNullable,
   isPromise,
   isVoidReturn,
   needsCreateProxy,
   needsToJs,
   renderType,
+  resolveKnownInterface,
   unwrapPromise,
 } from "./typeRendering";
 
 const PRELUDE = `\
+from __future__ import annotations
 from typing import Any, overload
 from pyodide.ffi import JsProxy, create_proxy, to_js
 
@@ -42,7 +45,14 @@ def _jsnull_to_none(value: Any) -> Any:
  * Renderer for generating Python bindings from TypeScript interfaces.
  */
 export class Renderer {
+  // Map of interface names to their Python class names
+  // This is used to resolve interface types that are returned from methods
+  private knownInterfaces: Map<string, string> = new Map();
+
   renderFile(interfaces: InterfaceIR[]): string {
+    this.knownInterfaces = buildKnownInterfacesMap(
+      interfaces.map((ir) => ir.name),
+    );
     const bodies = interfaces.map((ir) => this.renderInterface(ir));
     return PRELUDE + "\n" + bodies.join("\n\n");
   }
@@ -119,12 +129,12 @@ export class Renderer {
     const paramStrs = ["self", ...params.map((p) => this.renderParam(p))];
     if (spreadParam) {
       const spName = camelToSnake(spreadParam.name);
-      const spType = renderType(spreadParam.type);
+      const spType = renderType(spreadParam.type, this.knownInterfaces);
       paramStrs.push(`*${spName}: ${spType}`);
     }
 
     const paramList = paramStrs.join(", ");
-    const returnType = renderType(returns);
+    const returnType = renderType(returns, this.knownInterfaces);
 
     const argParts = params.map((p) => this.wrapArg(p));
     if (spreadParam) {
@@ -137,15 +147,7 @@ export class Renderer {
       rawCall = `await ${rawCall}`;
     }
 
-    const nullable = isNullable(returns);
-    let body: string;
-    if (isVoidReturn(returns)) {
-      body = `    ${rawCall}`;
-    } else if (nullable) {
-      body = `    return _jsnull_to_none(${rawCall})`;
-    } else {
-      body = `    return ${rawCall}`;
-    }
+    const body = this.wrapReturn(rawCall, returns);
     const prefix = isAsync ? "async " : "";
 
     return `${prefix}def ${pyName}(${paramList}) -> ${returnType}:\n${body}`;
@@ -161,7 +163,7 @@ export class Renderer {
 
     const paramStrs = ["self", ...sig.params.map((p) => this.renderParam(p))];
     const paramList = paramStrs.join(", ");
-    const returnType = renderType(returns);
+    const returnType = renderType(returns, this.knownInterfaces);
     const prefix = isAsync ? "async " : "";
 
     return `@overload\n${prefix}def ${pyName}(${paramList}) -> ${returnType}: ...`;
@@ -193,20 +195,31 @@ export class Renderer {
     const isOptional = prop.isOptional;
     const nullable = isOptional || isNullable(typeIR);
 
-    let typeStr = renderType(typeIR);
+    let typeStr = renderType(typeIR, this.knownInterfaces);
     if (isOptional) {
       typeStr += " | None";
     }
 
-    let getterExpr = jsAttrAccess("self._binding", jsName);
-    if (nullable) {
-      getterExpr = `_jsnull_to_none(${getterExpr})`;
+    const wrapperClass = resolveKnownInterface(typeIR, this.knownInterfaces);
+    const rawExpr = jsAttrAccess("self._binding", jsName);
+
+    let getterBody: string;
+    if (wrapperClass && nullable) {
+      getterBody =
+        `    _v = ${rawExpr}\n` +
+        `    return ${wrapperClass}(_v) if _v is not None else None`;
+    } else if (wrapperClass) {
+      getterBody = `    return ${wrapperClass}(${rawExpr})`;
+    } else if (nullable) {
+      getterBody = `    return _jsnull_to_none(${rawExpr})`;
+    } else {
+      getterBody = `    return ${rawExpr}`;
     }
 
     const lines = [
       "@property",
       `def ${pyName}(self) -> ${typeStr}:`,
-      `    return ${getterExpr}`,
+      getterBody,
     ];
 
     if (!isReadonly) {
@@ -229,15 +242,37 @@ export class Renderer {
 
   private renderParam(param: ParamIR): string {
     const name = toPythonName(param.name);
-    const typeStr = renderType(param.type);
+    const typeStr = renderType(param.type, this.knownInterfaces);
     if (param.isOptional) {
       return `${name}: ${typeStr} | None = None`;
     }
     return `${name}: ${typeStr}`;
   }
 
+  private wrapReturn(rawCall: string, returns: TypeIR): string {
+    const wrapperClass = resolveKnownInterface(returns, this.knownInterfaces);
+    const nullable = isNullable(returns);
+
+    if (isVoidReturn(returns)) {
+      return `    ${rawCall}`;
+    }
+    if (wrapperClass && nullable) {
+      return (
+        `    _v = ${rawCall}\n` +
+        `    return ${wrapperClass}(_v) if _v is not None else None`
+      );
+    }
+    if (wrapperClass) {
+      return `    return ${wrapperClass}(${rawCall})`;
+    }
+    if (nullable) {
+      return `    return _jsnull_to_none(${rawCall})`;
+    }
+    return `    return ${rawCall}`;
+  }
+
   private wrapArg(param: ParamIR): string {
-    const name = param.name;
+    const name = toPythonName(param.name);
     if (needsCreateProxy(param.type)) {
       return `create_proxy(${name})`;
     }

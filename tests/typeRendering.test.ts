@@ -1,7 +1,9 @@
 import { describe, it } from "node:test";
 import assert from "node:assert";
 import {
+  buildKnownInterfacesMap,
   renderType,
+  resolveKnownInterface,
   isPromise,
   unwrapPromise,
   isVoidReturn,
@@ -97,6 +99,81 @@ describe("renderType", () => {
   it("spread", () => {
     const ir: TypeIR = { kind: "spread", type: { kind: "simple", text: "str" } };
     assert.strictEqual(renderType(ir), "*str");
+  });
+
+  it("known interface reference renders as class name", () => {
+    const known = buildKnownInterfacesMap(["Videos_iface"]);
+    const ir: TypeIR = { kind: "reference", name: "Videos_iface", typeArgs: [] };
+    assert.strictEqual(renderType(ir, known), "Videos");
+  });
+
+  it("unknown interface reference still renders as Any", () => {
+    const known = buildKnownInterfacesMap(["Videos_iface"]);
+    const ir: TypeIR = { kind: "reference", name: "Other_iface", typeArgs: [] };
+    assert.strictEqual(renderType(ir, known), "Any");
+  });
+
+  it("union with known interface renders class name", () => {
+    const known = buildKnownInterfacesMap(["Item_iface"]);
+    const ir: TypeIR = {
+      kind: "union",
+      types: [
+        { kind: "reference", name: "Item_iface", typeArgs: [] },
+        { kind: "simple", text: "None" },
+      ],
+    };
+    assert.strictEqual(renderType(ir, known), "Item | None");
+  });
+});
+
+describe("resolveKnownInterface", () => {
+  const known = buildKnownInterfacesMap(["Videos_iface", "Item_iface"]);
+
+  it("direct reference resolves", () => {
+    assert.strictEqual(
+      resolveKnownInterface({ kind: "reference", name: "Videos_iface", typeArgs: [] }, known),
+      "Videos",
+    );
+  });
+
+  it("nullable union with known reference resolves", () => {
+    assert.strictEqual(
+      resolveKnownInterface(
+        { kind: "union", types: [
+          { kind: "reference", name: "Item_iface", typeArgs: [] },
+          { kind: "simple", text: "None" },
+        ] },
+        known,
+      ),
+      "Item",
+    );
+  });
+
+  it("unknown reference returns undefined", () => {
+    assert.strictEqual(
+      resolveKnownInterface({ kind: "reference", name: "Other", typeArgs: [] }, known),
+      undefined,
+    );
+  });
+
+  it("simple type returns undefined", () => {
+    assert.strictEqual(
+      resolveKnownInterface({ kind: "simple", text: "str" }, known),
+      undefined,
+    );
+  });
+
+  it("union with multiple non-None types returns undefined", () => {
+    assert.strictEqual(
+      resolveKnownInterface(
+        { kind: "union", types: [
+          { kind: "reference", name: "Videos_iface", typeArgs: [] },
+          { kind: "reference", name: "Item_iface", typeArgs: [] },
+        ] },
+        known,
+      ),
+      undefined,
+    );
   });
 });
 

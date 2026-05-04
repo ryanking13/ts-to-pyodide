@@ -80,6 +80,37 @@ function callableType(params: ParamIR[] = [], returns: TypeIR = { kind: "simple"
   return { kind: "callable", signatures: [irSig(params, returns)] };
 }
 
+function refType(name: string): TypeIR {
+  return { kind: "reference", name, typeArgs: [] };
+}
+
+describe("ty type-check sub-binding wrapping", () => {
+  it("method returning known interface (forward reference)", () => {
+    checkTy(renderer.renderFile([
+      irInterface("DB_iface", [
+        irMethod("prepare", [irSig(
+          [irParam("query", { kind: "simple", text: "str" })],
+          refType("Stmt_iface"),
+        )]),
+      ]),
+      irInterface("Stmt_iface", [
+        irMethod("run", [irSig([], promiseOf({ kind: "simple", text: "Any" }))]),
+      ]),
+    ]));
+  });
+
+  it("property typed as known interface", () => {
+    checkTy(renderer.renderFile([
+      irInterface("Videos_iface", [
+        irMethod("list", [irSig([], promiseOf({ kind: "simple", text: "Any" }))]),
+      ]),
+      irInterface("Binding_iface", [], [
+        irProperty("videos", refType("Videos_iface"), true),
+      ]),
+    ]));
+  });
+});
+
 describe("ty type-check inline cases", () => {
   it("arg conversion with array param", () => {
     checkTy(renderer.renderFile([
