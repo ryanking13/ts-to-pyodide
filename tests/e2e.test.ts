@@ -21,6 +21,7 @@ const FIXTURE_NAMES = [
   "overloads",
   "generic_method",
   "sub_binding_property",
+  "buffer_types",
 ];
 
 function loadFixture(name: string) {

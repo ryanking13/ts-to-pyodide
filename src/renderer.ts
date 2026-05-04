@@ -29,7 +29,7 @@ import {
 const PRELUDE = `\
 from __future__ import annotations
 from typing import Any, overload
-from pyodide.ffi import JsProxy, create_proxy, to_js
+from pyodide.ffi import JsBuffer, JsProxy, create_proxy, to_js
 
 def _jsnull_to_none(value: Any) -> Any:
     try:

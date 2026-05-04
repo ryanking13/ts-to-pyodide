@@ -42,6 +42,7 @@ const FIXTURE_NAMES = [
   "overloads",
   "generic_method",
   "sub_binding_property",
+  "buffer_types",
 ];
 
 describe("ty type-check fixtures", () => {

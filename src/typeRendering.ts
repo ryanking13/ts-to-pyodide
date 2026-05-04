@@ -4,6 +4,23 @@ import { stripIfaceSuffix } from "./naming";
 
 const PRIMITIVE_SIMPLE_TYPES = new Set(["str", "bool", "None", "Any", "Never"]);
 
+const REFERENCE_TYPE_MAP: Record<string, string> = {
+  ArrayBuffer: "JsBuffer",
+  ArrayBufferLike: "JsBuffer",
+  ArrayBufferView_iface: "JsBuffer",
+  Uint8Array: "JsBuffer",
+  Int8Array: "JsBuffer",
+  Uint16Array: "JsBuffer",
+  Int16Array: "JsBuffer",
+  Uint32Array: "JsBuffer",
+  Int32Array: "JsBuffer",
+  Float32Array: "JsBuffer",
+  Float64Array: "JsBuffer",
+  BigInt64Array: "JsBuffer",
+  BigUint64Array: "JsBuffer",
+  Uint8ClampedArray: "JsBuffer",
+};
+
 export function renderType(
   ir: TypeIR,
   knownInterfaces?: Map<string, string>,
@@ -25,6 +42,8 @@ export function renderType(
       }
       const resolved = knownInterfaces?.get(ir.name);
       if (resolved) return resolved;
+      const mapped = REFERENCE_TYPE_MAP[ir.name];
+      if (mapped) return mapped;
       return "Any";
     }
     case "array":

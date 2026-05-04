@@ -102,6 +102,7 @@ describe("fixture tests", () => {
     "overloads",
     "generic_method",
     "sub_binding_property",
+    "buffer_types",
   ];
 
   for (const name of fixtures) {
@@ -475,7 +476,7 @@ describe("renderFile", () => {
   it("includes prelude with pyodide imports", () => {
     const result = renderer.renderFile([irInterface("X_iface")]);
     assert.ok(result.includes("from typing import Any, overload"));
-    assert.ok(result.includes("from pyodide.ffi import JsProxy, create_proxy, to_js"));
+    assert.ok(result.includes("from pyodide.ffi import JsBuffer, JsProxy, create_proxy, to_js"));
     assert.ok(result.includes("def _jsnull_to_none"));
   });
 
@@ -483,7 +484,7 @@ describe("renderFile", () => {
     const result = renderer.renderFile([irInterface("X_iface")]);
     const preludeEnd = result.indexOf("class X:");
     assert.ok(preludeEnd > 0);
-    assert.ok(result.indexOf("from pyodide.ffi import JsProxy") < preludeEnd);
+    assert.ok(result.indexOf("from pyodide.ffi import JsBuffer") < preludeEnd);
   });
 
   it("multiple interfaces in one file", () => {

@@ -101,6 +101,21 @@ describe("renderType", () => {
     assert.strictEqual(renderType(ir), "*str");
   });
 
+  it("ArrayBuffer renders as JsBuffer", () => {
+    const ir: TypeIR = { kind: "reference", name: "ArrayBuffer", typeArgs: [] };
+    assert.strictEqual(renderType(ir), "JsBuffer");
+  });
+
+  it("Uint8Array renders as JsBuffer", () => {
+    const ir: TypeIR = { kind: "reference", name: "Uint8Array", typeArgs: [] };
+    assert.strictEqual(renderType(ir), "JsBuffer");
+  });
+
+  it("Float64Array renders as JsBuffer", () => {
+    const ir: TypeIR = { kind: "reference", name: "Float64Array", typeArgs: [] };
+    assert.strictEqual(renderType(ir), "JsBuffer");
+  });
+
   it("known interface reference renders as class name", () => {
     const known = buildKnownInterfacesMap(["Videos_iface"]);
     const ir: TypeIR = { kind: "reference", name: "Videos_iface", typeArgs: [] };

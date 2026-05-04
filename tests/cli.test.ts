@@ -44,7 +44,7 @@ describe("CLI", () => {
 
       const content = readFileSync(outFile, "utf-8");
       assert.match(content, /from typing import Any, overload/);
-      assert.match(content, /from pyodide\.ffi import JsProxy/);
+      assert.match(content, /from pyodide\.ffi import JsBuffer, JsProxy/);
       assert.match(content, /def _jsnull_to_none/);
       assert.ok(content.includes("class KVNamespace:"), "expected class KVNamespace in output");
       assert.ok(content.includes("def __init__(self, binding: JsProxy)"), "expected __init__ in output");

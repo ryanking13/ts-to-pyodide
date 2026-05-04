@@ -1,0 +1,25 @@
+{
+  "kind": "interface",
+  "name": "CryptoHelper_iface",
+  "methods": [
+    {
+      "kind": "callable", "name": "digest", "isStatic": false,
+      "signatures": [{
+        "params": [{ "name": "data", "type": { "kind": "reference", "name": "ArrayBuffer", "typeArgs": [] }, "isOptional": false }],
+        "returns": { "kind": "reference", "name": "Promise", "typeArgs": [{ "kind": "reference", "name": "ArrayBuffer", "typeArgs": [] }] }
+      }]
+    },
+    {
+      "kind": "callable", "name": "encode", "isStatic": false,
+      "signatures": [{
+        "params": [{ "name": "input", "type": { "kind": "simple", "text": "str" }, "isOptional": false }],
+        "returns": { "kind": "reference", "name": "Uint8Array", "typeArgs": [] }
+      }]
+    }
+  ],
+  "properties": [
+    { "name": "raw", "type": { "kind": "reference", "name": "ArrayBuffer", "typeArgs": [] }, "isReadonly": true, "isOptional": false, "isStatic": false }
+  ],
+  "typeParams": [],
+  "bases": []
+}
