@@ -4,7 +4,20 @@ import { writeFileSync, mkdtempSync, rmSync, readFileSync } from "fs";
 import { resolve, join } from "path";
 import { tmpdir } from "os";
 import { Renderer } from "../src/renderer.js";
-import { InterfaceIR, CallableIR, SigIR, ParamIR, PropertyIR, TypeIR } from "../src/ir.js";
+import {
+  FIXTURE_NAMES,
+  FIXTURES_DIR,
+  irInterface,
+  irMethod,
+  irSig,
+  irSigWithSpread,
+  irSigWithKwparams,
+  irParam,
+  irProperty,
+  promiseOf,
+  callableType,
+  refType,
+} from "./helpers.js";
 
 const renderer = new Renderer();
 
@@ -27,24 +40,6 @@ function checkTy(code: string): void {
   }
 }
 
-const FIXTURES_DIR = resolve(import.meta.dirname!, "fixtures");
-
-const FIXTURE_NAMES = [
-  "sync_method",
-  "greeter",
-  "math_params",
-  "async_delete",
-  "readonly_properties",
-  "d1database",
-  "hyperdrive",
-  "overloads",
-  "generic_method",
-  "sub_binding_property",
-  "buffer_types",
-  "kwparams",
-  "get_accessor",
-];
-
 describe("ty type-check fixtures", () => {
   for (const name of FIXTURE_NAMES) {
     it(name, () => {
@@ -55,35 +50,6 @@ describe("ty type-check fixtures", () => {
     });
   }
 });
-
-function irInterface(name: string, methods: CallableIR[] = [], properties: PropertyIR[] = []): InterfaceIR {
-  return { kind: "interface", name, methods, properties, typeParams: [], bases: [] };
-}
-function irMethod(name: string, signatures: SigIR[] = []): CallableIR {
-  return { kind: "callable", name, signatures, isStatic: false };
-}
-function irSig(params: ParamIR[] = [], returns: TypeIR = { kind: "simple", text: "None" }): SigIR {
-  return { params, returns };
-}
-function irSigWithSpread(params: ParamIR[], spreadParam: ParamIR, returns: TypeIR = { kind: "simple", text: "None" }): SigIR {
-  return { params, spreadParam, returns };
-}
-function irParam(name: string, type: TypeIR, isOptional = false): ParamIR {
-  return { name, type, isOptional };
-}
-function irProperty(name: string, type: TypeIR, isReadonly = false, isOptional = false): PropertyIR {
-  return { name, type, isReadonly, isOptional, isStatic: false };
-}
-function promiseOf(inner: TypeIR): TypeIR {
-  return { kind: "reference", name: "Promise", typeArgs: [inner] };
-}
-function callableType(params: ParamIR[] = [], returns: TypeIR = { kind: "simple", text: "None" }): TypeIR {
-  return { kind: "callable", signatures: [irSig(params, returns)] };
-}
-
-function refType(name: string): TypeIR {
-  return { kind: "reference", name, typeArgs: [] };
-}
 
 describe("ty type-check sub-binding wrapping", () => {
   it("method returning known interface (forward reference)", () => {
@@ -111,14 +77,6 @@ describe("ty type-check sub-binding wrapping", () => {
     ]));
   });
 });
-
-function irSigWithKwparams(
-  params: ParamIR[],
-  kwparams: ParamIR[],
-  returns: TypeIR = { kind: "simple", text: "None" },
-): SigIR {
-  return { params, kwparams, returns };
-}
 
 describe("ty type-check kwparams", () => {
   it("kwparams method with dict building", () => {

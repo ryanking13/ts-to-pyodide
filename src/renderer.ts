@@ -8,13 +8,13 @@ import {
 } from "./ir";
 import {
   camelToSnake,
+  isValidPythonIdentifier,
   jsAttrAccess,
   jsMethodCall,
   stripIfaceSuffix,
   toPythonName,
   PYTHON_RESERVED,
 } from "./naming";
-import { isValidPythonIdentifier } from "./astUtils";
 import {
   buildKnownInterfacesMap,
   isNullable,
@@ -117,7 +117,6 @@ export class Renderer {
 
     return lines.join("\n") + "\n";
   }
-
 
   private renderMethod(method: CallableIR): string {
     const jsName = method.name;

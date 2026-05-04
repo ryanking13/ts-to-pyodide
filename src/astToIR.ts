@@ -30,6 +30,7 @@ import {
 } from "ts-morph";
 import { BUILTIN_NAMES, TYPE_TEXT_MAP } from "./adjustments.js";
 import { groupBy, popElt, split, split2 } from "./groupBy.js";
+import { isValidPythonIdentifier } from "./naming.js";
 import {
   assertUnreachable,
   classifyIdentifier,
@@ -37,7 +38,6 @@ import {
   getExpressionTypeArgs,
   getNodeLocation,
   groupMembers,
-  isValidPythonIdentifier,
 } from "./astUtils.js";
 import { sanitizeReservedWords, uniqBy } from "./irToString.js";
 import { Needed } from "./types.js";

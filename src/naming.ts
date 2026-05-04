@@ -2,7 +2,7 @@
 // run `python -c "import keyword; print('\n'.join(sorted(keyword.kwlist)))"`
 // and
 // run `python -c "import keyword; print('\n'.join(sorted(keyword.softkwlist)))"`
-export const PYTHON_KEYWORDS = new Set([
+const PYTHON_KEYWORDS = new Set([
   "False", "None", "True",
   "and", "as", "assert", "async", "await",
   "break",
@@ -22,7 +22,7 @@ export const PYTHON_KEYWORDS = new Set([
   "yield",
 ]);
 
-export const PYTHON_SOFT_KEYWORDS = new Set([
+const PYTHON_SOFT_KEYWORDS = new Set([
   "_", "case", "match", "type",
 ]);
 
@@ -54,6 +54,10 @@ export function stripIfaceSuffix(name: string): string {
     return name.slice(0, -"_iface".length);
   }
   return name;
+}
+
+export function isValidPythonIdentifier(name: string): boolean {
+  return /^[a-zA-Z_][a-zA-Z0-9_]*$/.test(name);
 }
 
 export function jsAttrAccess(obj: string, jsName: string): string {

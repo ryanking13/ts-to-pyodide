@@ -1,30 +1,13 @@
 import { describe, it } from "node:test";
 import assert from "node:assert";
-import { readFileSync, existsSync } from "fs";
+import { readFileSync } from "fs";
 import { resolve } from "path";
-import { makeProject } from "./helpers.js";
+import { FIXTURE_NAMES, FIXTURES_DIR, makeProject } from "./helpers.js";
 import { convertToIR } from "../src/extract.js";
 import { Renderer } from "../src/renderer.js";
 import { InterfaceIR } from "../src/ir.js";
 
-const FIXTURES_DIR = resolve(import.meta.dirname!, "fixtures");
 const renderer = new Renderer();
-
-const FIXTURE_NAMES = [
-  "sync_method",
-  "greeter",
-  "math_params",
-  "async_delete",
-  "readonly_properties",
-  "d1database",
-  "hyperdrive",
-  "overloads",
-  "generic_method",
-  "sub_binding_property",
-  "buffer_types",
-  "kwparams",
-  "get_accessor",
-];
 
 function loadFixture(name: string) {
   const dir = resolve(FIXTURES_DIR, name);
@@ -78,16 +61,6 @@ describe("e2e: .d.ts → IR (fixture validation)", () => {
         assert.ok(found, `Missing property ${prop.name} in IR for ${name}`);
         assert.strictEqual(found.isReadonly, prop.isReadonly);
       }
-    });
-  }
-});
-
-describe("e2e: IR → Python (fixture validation)", () => {
-  for (const name of FIXTURE_NAMES) {
-    it(name, () => {
-      const { expectedIR, expectedPy } = loadFixture(name);
-      const result = renderer.renderInterface(expectedIR);
-      assert.strictEqual(result, expectedPy);
     });
   }
 });

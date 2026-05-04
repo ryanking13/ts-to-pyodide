@@ -3,9 +3,22 @@ import assert from "node:assert";
 import { readFileSync } from "fs";
 import { resolve } from "path";
 import { Renderer } from "../src/renderer";
-import { InterfaceIR, CallableIR, SigIR, ParamIR, PropertyIR, TypeIR } from "../src/ir";
-
-const FIXTURES_DIR = resolve(import.meta.dirname!, "fixtures");
+import { InterfaceIR } from "../src/ir";
+import {
+  FIXTURE_NAMES,
+  FIXTURES_DIR,
+  irInterface,
+  irMethod,
+  irSig,
+  irSigWithSpread,
+  irSigWithKwparams,
+  irParam,
+  irProperty,
+  promiseOf,
+  nullable,
+  callableType,
+  refType,
+} from "./helpers.js";
 
 function loadFixture(name: string): { ir: InterfaceIR; expected: string } {
   const ir = JSON.parse(
@@ -18,96 +31,10 @@ function loadFixture(name: string): { ir: InterfaceIR; expected: string } {
   return { ir, expected };
 }
 
-function irInterface(
-  name: string,
-  methods: CallableIR[] = [],
-  properties: PropertyIR[] = [],
-): InterfaceIR {
-  return {
-    kind: "interface",
-    name,
-    methods,
-    properties,
-    typeParams: [],
-    bases: [],
-  };
-}
-
-function irMethod(
-  name: string,
-  signatures: SigIR[] = [],
-  isStatic = false,
-): CallableIR {
-  return { kind: "callable", name, signatures, isStatic };
-}
-
-function irSig(
-  params: ParamIR[] = [],
-  returns: TypeIR = { kind: "simple", text: "None" },
-): SigIR {
-  return { params, returns };
-}
-
-function irSigWithSpread(
-  params: ParamIR[] = [],
-  spreadParam: ParamIR | undefined,
-  returns: TypeIR = { kind: "simple", text: "None" },
-): SigIR {
-  return { params, spreadParam, returns };
-}
-
-function irParam(
-  name: string,
-  type: TypeIR,
-  isOptional = false,
-): ParamIR {
-  return { name, type, isOptional };
-}
-
-function irProperty(
-  name: string,
-  type: TypeIR,
-  isReadonly = false,
-  isOptional = false,
-): PropertyIR {
-  return { name, type, isReadonly, isOptional, isStatic: false };
-}
-
-function promiseOf(inner: TypeIR): TypeIR {
-  return { kind: "reference", name: "Promise", typeArgs: [inner] };
-}
-
-function nullable(inner: TypeIR): TypeIR {
-  return { kind: "union", types: [inner, { kind: "simple", text: "None" }] };
-}
-
-function callableType(
-  params: ParamIR[] = [],
-  returns: TypeIR = { kind: "simple", text: "None" },
-): TypeIR {
-  return { kind: "callable", signatures: [irSig(params, returns)] };
-}
-
 const renderer = new Renderer();
 
 describe("fixture tests", () => {
-  const fixtures = [
-    "sync_method",
-    "greeter",
-    "math_params",
-    "async_delete",
-    "readonly_properties",
-    "d1database",
-    "hyperdrive",
-    "overloads",
-    "generic_method",
-    "sub_binding_property",
-    "buffer_types",
-    "kwparams",
-    "get_accessor",
-  ];
-
-  for (const name of fixtures) {
+  for (const name of FIXTURE_NAMES) {
     it(name, () => {
       const { ir, expected } = loadFixture(name);
       assert.strictEqual(renderer.renderInterface(ir), expected);
@@ -527,10 +454,6 @@ describe("deduplication", () => {
   });
 });
 
-function refType(name: string): TypeIR {
-  return { kind: "reference", name, typeArgs: [] };
-}
-
 describe("sub-binding wrapping", () => {
   it("property typed as known interface wraps with class constructor", () => {
     const result = renderer.renderFile([
@@ -637,14 +560,6 @@ describe("sub-binding wrapping", () => {
     assert.ok(result.includes("self._binding.videos = value"));
   });
 });
-
-function irSigWithKwparams(
-  params: ParamIR[],
-  kwparams: ParamIR[],
-  returns: TypeIR = { kind: "simple", text: "None" },
-): SigIR {
-  return { params, kwparams, returns };
-}
 
 describe("kwparams", () => {
   it("renders keyword-only params with * separator", () => {

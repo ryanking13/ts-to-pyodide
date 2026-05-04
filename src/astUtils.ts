@@ -276,10 +276,6 @@ export function classifyIdentifier(ident: Identifier): ClassifiedIdentifier {
   throw new Error("Unrecognized ident!");
 }
 
-export function isValidPythonIdentifier(name: string): boolean {
-  return /^[a-zA-Z_][a-zA-Z0-9_]*$/.test(name);
-}
-
 export function deduplicateBy<T>(l: Iterable<T>, key: (t: T) => string): T[] {
   const s = new Set();
   const res = [];
