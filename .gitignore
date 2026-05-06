@@ -5,3 +5,4 @@ generated
 **/__pycache__
 CODEBASE_TOUR.md
 PLAN.md
+.test-output

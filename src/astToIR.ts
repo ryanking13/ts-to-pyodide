@@ -144,7 +144,7 @@ function getInterfaceDeclToDestructure(
     return undefined;
   }
   const classified = classifyIdentifier(ident);
-  if (classified.kind !== "interfaces") {
+  if (classified.kind !== "interfaces" || classified.ifaces.length === 0) {
     return undefined;
   }
   const iface = classified.ifaces[0];

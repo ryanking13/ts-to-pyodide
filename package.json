@@ -7,6 +7,7 @@
   "bin": "dist/main.js",
   "scripts": {
     "test": "node --test --import=tsx 'tests/**/*.test.ts'",
+    "test:integration": "INTEGRATION_TEST=1 node --test --import=tsx tests/integration.test.ts",
     "run": "tsx src/main.ts",
     "build": "npx tsc",
     "check": "npx tsc -p tsconfig-check.json"

@@ -119,8 +119,9 @@ function resolveTypeParameterDefault(
   decl: TypeParameterDeclaration,
   paramDecls: TypeParameterDeclaration[],
   resolvedTypeArgs: TypeNode[],
-): TypeNode {
-  const defaultType = decl.getDefaultOrThrow();
+): TypeNode | undefined {
+  const defaultType = decl.getDefault();
+  if (!defaultType) return undefined;
 
   // Hacky: do text replacement on the type text.
   // There must be a better way?
@@ -207,6 +208,7 @@ export function getExpressionTypeArgs(
         paramDecls,
         typeArgNodes,
       );
+      if (!defaultType) break;
       typeArgNodes.push(defaultType);
     }
   }

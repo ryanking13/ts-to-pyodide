@@ -73,18 +73,18 @@ function fixupClassBases(nameToCls: Map<string, InterfaceIR>): void {
 
 function adjustIR(topLevels: TopLevels): void {
   const classes = topLevels.ifaces;
-  const nameToCls = new Map(classes.map((cls) => [cls.name, cls]));
-  if (nameToCls.size < classes.length) {
-    const once = new Set();
-    const twice = new Set();
-    for (const { name } of classes) {
-      if (once.has(name)) {
-        twice.add(name);
-      } else {
-        once.add(name);
-      }
+  // TODO: duplicates arise from declare module extraction and declare class + interface
+  // pairs. Currently we pick the richer one (more methods+properties), but ideally we
+  // should merge members from both or prevent duplicates at the extraction level.
+  const nameToCls = new Map<string, InterfaceIR>();
+  for (const cls of classes) {
+    const existing = nameToCls.get(cls.name);
+    if (!existing || cls.methods.length + cls.properties.length > existing.methods.length + existing.properties.length) {
+      nameToCls.set(cls.name, cls);
     }
-    throw new Error(`Duplicate names: ${Array.from(twice).join(", ")}`);
+  }
+  if (nameToCls.size < classes.length) {
+    topLevels.ifaces = [...nameToCls.values()];
   }
   fixupClassBases(nameToCls);
   classes.forEach(adjustInterfaceIR);
