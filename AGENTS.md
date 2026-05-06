@@ -23,13 +23,22 @@ TDD approach: every feature was added as a failing test first. All tests run via
 |------|---------|
 | `tests/ir.test.ts` | IR extraction from `.d.ts` |
 | `tests/naming.test.ts` | `camelToSnake`, `sanitizePythonName`, `jsAttrAccess`, keyword completeness |
-| `tests/typeRendering.test.ts` | `renderType`, `isPromise`, `isNullable`, `needsToJs`, `needsCreateProxy`, `resolveKnownInterface` |
+| `tests/typeRendering.test.ts` | `renderType`, `isPromise`, `isNullable`, `needsToJs`, `needsCreateProxy`, `resolveKnownInterface`, `needsToPy`, Record/Headers rendering |
 | `tests/renderer.test.ts` | Fixture-based + inline assertion tests for `Renderer` class |
-| `tests/e2e.test.ts` | Full pipeline: `.d.ts` → IR → Python, sub-binding wrapping via `renderFile`, known IR gap tests |
-| `tests/tycheck.test.ts` | Runs `ty` type checker on generated Python using real `pyodide-py` types |
+| `tests/e2e.test.ts` | Full pipeline: `.d.ts` → IR → Python, sub-binding wrapping, constructor support, TypedDict options, R2 bucket fixture |
+| `tests/tycheck.test.ts` | Runs `ty` type checker on generated Python using real `pyodide-py` types + `js.pyi` stub |
 | `tests/cli.test.ts` | CLI subcommand tests (`render`, `ir`, default, help) with self-contained fixture |
+| `tests/integration.test.ts` | Full pipeline against `@cloudflare/workers-types` npm package (env-gated) |
 
-Test fixtures live in `tests/fixtures/{name}/` with three files each: `input.d.ts`, `ir.json`, `expected.py`. The `sub_binding_wrap` fixture includes the full prelude and tests `renderFile` with multiple interfaces. The `cli_project` fixture is a self-contained TS project for CLI integration tests.
+### Test Fixtures
+
+Fixtures live in `tests/fixtures/{name}/`. Two kinds:
+
+**renderInterface fixtures** (`input.d.ts` + `ir.json` + `expected.py`) — test single class rendering:
+`sync_method`, `greeter`, `math_params`, `async_delete`, `readonly_properties`, `d1database`, `hyperdrive`, `overloads`, `generic_method`, `sub_binding_property`, `buffer_types`, `get_accessor`
+
+**renderFile fixtures** (`input.d.ts` + `expected.py`) — test full pipeline with prelude, multiple classes, sub-binding wrapping:
+`sub_binding_wrap`, `declare_module`, `constructor`, `kwparams`, `r2_bucket`
 
 ## Architecture
 
@@ -45,9 +54,10 @@ Test fixtures live in `tests/fixtures/{name}/` with three files each: `input.d.t
 | Change how TS is parsed to IR | `src/astToIR.ts` |
 | Change wrapper Python output | `src/renderer.ts` |
 | Change naming conventions | `src/naming.ts` |
-| Change type annotations | `src/typeRendering.ts` |
+| Change type annotations / native types | `src/typeRendering.ts` |
 | Change CLI behavior | `src/main.ts` |
-| Add a new wrapper feature | Add test first (TDD) in `tests/renderer.test.ts` |
+| Add a new wrapper feature | Add test first (TDD) in `tests/renderer.test.ts` or `tests/e2e.test.ts` |
+| Add a native type override | Add to `NATIVE_TYPES` in `src/typeRendering.ts` + helper in prelude |
 | Debug IR shape for a TS pattern | See `tests/e2e.test.ts` for how to call `convertToIR` inline |
 
 ## Key Design Decisions
@@ -63,36 +73,67 @@ Test fixtures live in `tests/fixtures/{name}/` with three files each: `input.d.t
 | `_binding` type | `Any` (not `JsProxy`) | pyodide's `JsProxy` stubs lack `__getattr__`, type checker can't resolve attribute access |
 | null/undefined | Always wrap with `_jsnull_to_none` | IR conflates null/undefined/void into `None`; safe overshoot |
 | Arg conversion | Inline in call expression | `to_js(param)` in arg list, not reassigning variable (avoids ty type errors) |
-| Generated prelude | Static, uses real pyodide imports | `from pyodide.ffi import JsBuffer, JsProxy, create_proxy, to_js` with `jsnull` try/except guard |
+| Generated prelude | Static, uses real pyodide imports | `import js` + `from pyodide.ffi import JsBuffer, JsProxy, create_proxy, to_js` with helpers |
 | Forward references | `from __future__ import annotations` | Lazy annotation evaluation avoids `NameError` when class A references class B defined later |
-| Type checking | `ty` with pyodide-py in `.venv-ty` | Real type resolution from pyodide stubs |
-| Sub-binding wrapping | Wrap properties/returns with generated class | `Videos(self._binding.videos)` when type is a known interface |
-| Buffer type mapping | `ArrayBuffer`/TypedArrays → `JsBuffer` | Pyodide's `JsBuffer` subclass; more specific than `Any` |
-| kwparams | Destructured option bags → keyword-only args | `put(key, *, expiration=None, ttl=None)` with `_opts` dict building |
-| `__getattr__` fallback | Forward unknown attrs to JsProxy | Safety net for properties/methods not in `.d.ts` |
-| `js_object` property | Expose raw JsProxy | Escape hatch for direct JsProxy access |
+| Type checking | `ty` with pyodide-py + `js.pyi` stub | Real type resolution; `js` module stub via `--extra-search-path` |
+| Constructor support | `declare class` with constructor → `__init__` calling `js.ClassName.new()` | Pyodide's `.new()` maps to JS `Reflect.construct()` |
+| `from_js` classmethod | All wrapper types get `from_js(cls, js_obj)` | Wraps existing JsProxy without calling constructor |
+| No-constructor types | Interfaces without constructor skip `__init__` | Users interact via `from_js` or sub-binding wrapping |
+| Sub-binding wrapping | Wrap via `from_js` classmethod | `D1PreparedStatement.from_js(self._binding.prepare(query))` |
+| Data bag interfaces | TypedDict with snake_case keys | Interfaces with only properties, no methods → `TypedDict(total=False)` |
+| Options parameters | Keep as TypedDict param, not kwparams | `put(key, value, options: R2PutOptions \| None)` instead of destructuring |
+| Key conversion | `_to_js_opts` / `_from_js_opts` helpers | snake_case ↔ camelCase key conversion + None filtering |
+| Record type | `Record<K, V>` → `dict[K, V]` | Inbound: `.to_py()`, outbound: `to_js()` |
+| Native type overrides | `NATIVE_TYPES` registry in typeRendering.ts | Custom type annotation + conversion for `Headers`, extensible for `Blob`, `URL`, etc. |
+| Headers | `dict[str, str] \| list[tuple[str, str]] \| JsProxy` | Adopted from workers-py; `_to_js_headers` helper converts at call site |
+| `import js` | Added to prelude | Required for `js.ClassName.new()` and `js.Headers.new()` |
+| Non-global constructors | `js.ClassName` for all, fail at runtime if not global | `declare module` types aren't on `globalThis`; TODO: import from submodules |
 | TS lib filtering | Exclude `node_modules/typescript/lib/` files | Prevents JS builtins (Object, Math, String) from generating wrappers |
+| `declare class` IR | Single entry with constructors merged | Refactored from upstream's two-entry split (`ClassName` + `ClassName_iface`) |
 
+## Type Classification
+
+The renderer classifies interfaces into three categories:
+
+| Category | Detection | Rendering | Example |
+|----------|-----------|-----------|---------|
+| **Wrapper class** | Has methods, or has constructors | `class` with `_binding`, `from_js`, `__init__` (if constructor) | `R2Bucket`, `HTMLRewriter`, `R2Object` |
+| **Data bag (TypedDict)** | Properties only, no methods, no constructors, no reserved-word keys | `TypedDict` with snake_case keys | `R2GetOptions`, `R2Conditional`, `R2UploadedPart` |
+| **Duplicate `None`** | `isNullable` check on optional params/properties/kwparams | `= None` without extra `\| None` when type already contains `None` |
 
 ## PyProxy Boundary Rules
 
 ### Rule 1: dict/list → JS via `to_js()`
-Interface/array-typed params get `to_js(param)` inline in the call. Detected by `needsToJs()` — returns true for `reference` and `array` IR types.
+Interface/array-typed params get `to_js(param)` inline in the call. Detected by `needsToJs()`.
 
 ### Rule 2: Callable → JS via `create_proxy()`
-Callable-typed params get `create_proxy(param)`. Detected by `needsCreateProxy()` — returns true for `callable` IR types. Takes priority over `to_js`.
+Callable-typed params get `create_proxy(param)`. Detected by `needsCreateProxy()`. Takes priority over `to_js`.
 
-### Rule 3: JS null → Python via `_jsnull_to_none()`
-Nullable returns (union containing `None`) wrap the call result. Detected by `isNullable()`.
+### Rule 3: Data bags → JS via `_to_js_opts()`
+TypedDict params use `_to_js_opts()` which converts snake_case keys to camelCase and filters None values.
+
+### Rule 4: Native types → JS via custom helpers
+Params with native type overrides (e.g. `Headers`) use custom helpers (e.g. `_to_js_headers`). Only for non-union types; union params fall through to `to_js()`.
+
+### Rule 5: JS null → Python via `_jsnull_to_none()`
+Nullable returns (union containing `None`) wrap the call result.
+
+### Rule 6: Data bags ← JS via `_from_js_opts()`
+TypedDict-typed returns/properties use `_from_js_opts()` which converts camelCase keys to snake_case.
+
+### Rule 7: Record ← JS via `.to_py()`
+`Record<K, V>` returns/properties use `.to_py()` for plain dict conversion.
 
 ## Type Rendering Rules
 
 - **Primitives** (`str`, `bool`, `None`, `Any`, `Never`, `int | float`): rendered as-is
 - **`Promise<T>`**: kept as `Promise[T]` for async detection; the renderer unwraps it
-- **Known interfaces**: when `renderFile()` is used, reference types matching generated classes render as the class name (e.g. `Videos_iface` → `Videos`). Resolved via `knownInterfaces` map on the `Renderer`.
-- **Buffer types**: `ArrayBuffer`, `ArrayBufferLike`, `ArrayBufferView`, and all TypedArrays (`Uint8Array`, `Int8Array`, `Float32Array`, etc.) render as `JsBuffer`
-- **All other reference types**: rendered as `Any` — includes `ReadableStream`, `URL`, `Headers`, `Blob`, etc. These stay as `JsProxy` at runtime in Pyodide with no automatic conversion.
-- **Generic type params** (`parameterReference`): rendered as `Any` — `T` in `Promise<T | null>` becomes `Any | None`
+- **`Record<K, V>`**: rendered as `dict[K, V]`; inbound `.to_py()`, outbound `to_js()`
+- **Known interfaces**: reference types matching generated classes render as the class name
+- **Native types**: `Headers` → `dict[str, str] | list[tuple[str, str]] | JsProxy` (extensible via `NATIVE_TYPES`)
+- **Buffer types**: `ArrayBuffer`, `ArrayBufferLike`, `ArrayBufferView`, TypedArrays → `JsBuffer`
+- **All other reference types**: rendered as `Any`
+- **Generic type params** (`parameterReference`): rendered as `Any`
 - **Callable types**: rendered as `Any`
 - **Unknown constructs** (`OtherTypeIR`): rendered as `Any`
 
@@ -104,6 +145,11 @@ Nullable returns (union containing `None`) wrap the call result. Detected by `is
 - `AnalyticsEngineDataset` in .d.ts → `AnalyticsEngine` at runtime
 - `VectorizeIndex` in .d.ts → `VectorizeIndexImpl` at runtime
 
+### IR Extraction Patterns
+- `declare class` → single IR entry with `constructors` field (refactored from upstream's two-entry split)
+- `declare var X: { prototype: X, new(): X }` + `interface X` → two IR entries (legacy pattern, not yet unified)
+- `interface` → IR entry with `_iface` suffix
+- `declare module "..."` → classes extracted alongside top-level declarations
 
 ## Common Coding conventions
 
