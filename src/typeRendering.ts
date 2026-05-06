@@ -53,7 +53,7 @@ export function renderType(
         }
         return ir.name;
       }
-      if (ir.name === "Record" && ir.typeArgs.length === 2) {
+      if ((ir.name === "Record" || ir.name === "Map") && ir.typeArgs.length === 2) {
         const k = renderType(ir.typeArgs[0], knownInterfaces);
         const v = renderType(ir.typeArgs[1], knownInterfaces);
         return `dict[${k}, ${v}]`;
@@ -157,7 +157,7 @@ export function needsCreateProxy(ir: TypeIR): boolean {
 }
 
 export function needsToPy(ir: TypeIR): boolean {
-  if (ir.kind === "reference" && ir.name === "Record") return true;
+  if (ir.kind === "reference" && (ir.name === "Record" || ir.name === "Map")) return true;
   if (ir.kind === "union") {
     return ir.types.some((t) => !(t.kind === "simple" && t.text === "None") && needsToPy(t));
   }
