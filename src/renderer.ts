@@ -88,17 +88,19 @@ export class Renderer {
   // A TypeScript object that only has properties and no methods is considered a data bag
   // In python, we pass it as a TypedDict not a class which is more pythonic
   private isDataBag(ir: InterfaceIR): boolean {
+    if (ir.constructors && ir.constructors.length > 0) return false;
     const hasMethods = ir.methods.some(
       (m) => m.name !== "__call__" && m.name && !m.isStatic,
     );
-    return !hasMethods &&
-      ir.properties.length > 0 &&
-      ir.properties.every((p) => p.isOptional);
+    if (hasMethods || ir.properties.length === 0) return false;
+    return ir.properties.every((p) => !PYTHON_RESERVED.has(p.name));
   }
 
   private renderTypedDict(ir: InterfaceIR): string {
     const className = stripIfaceSuffix(ir.name);
-    const lines = [`class ${className}(TypedDict, total=False):`];
+    const allOptional = ir.properties.every((p) => p.isOptional);
+    const total = allOptional ? ", total=False" : "";
+    const lines = [`class ${className}(TypedDict${total}):`];
     for (const prop of ir.properties) {
       const typeStr = renderType(prop.type, this.knownInterfaces);
       lines.push(`    ${prop.name}: ${typeStr}`);

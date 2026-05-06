@@ -271,7 +271,7 @@ class R2MultipartUpload:
         return self._binding.uploadId
 
     async def upload_part(self, part_number: int | float, value: Any | JsBuffer | str | Any) -> R2UploadedPart:
-        return R2UploadedPart.from_js(await self._binding.uploadPart(part_number, to_js(value)))
+        return (await self._binding.uploadPart(part_number, to_js(value))).to_py()
 
     async def abort(self) -> None:
         await self._binding.abort()
@@ -294,34 +294,6 @@ class R2StringChecksums(TypedDict, total=False):
     sha256: str
 
 
-class R2UploadedPart:
-    _binding: Any
-
-    @classmethod
-    def from_js(cls, js_obj: JsProxy) -> R2UploadedPart:
-        instance = object.__new__(cls)
-        instance._binding = js_obj
-        return instance
-
-    @property
-    def js_object(self) -> JsProxy:
-        return self._binding
-
-    def __getattr__(self, name: str) -> Any:
-        return getattr(self._binding, name)
-
-    @property
-    def part_number(self) -> int | float:
-        return self._binding.partNumber
-    
-    @part_number.setter
-    def part_number(self, value: int | float) -> None:
-        self._binding.partNumber = value
-
-    @property
-    def etag(self) -> str:
-        return self._binding.etag
-    
-    @etag.setter
-    def etag(self, value: str) -> None:
-        self._binding.etag = value
+class R2UploadedPart(TypedDict):
+    partNumber: int | float
+    etag: str

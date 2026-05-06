@@ -460,7 +460,7 @@ describe("sub-binding wrapping", () => {
       irInterface("Videos_iface", [
         irMethod("list", [irSig([], promiseOf({ kind: "simple", text: "Any" }))]),
       ]),
-      irInterface("Binding_iface", [], [
+      irInterface("Binding_iface", [irMethod("fetch", [irSig()])], [
         irProperty("videos", refType("Videos_iface")),
       ]),
     ]);
@@ -470,7 +470,7 @@ describe("sub-binding wrapping", () => {
 
   it("property typed as unknown interface stays as Any", () => {
     const result = renderer.renderFile([
-      irInterface("Binding_iface", [], [
+      irInterface("Binding_iface", [irMethod("fetch", [irSig()])], [
         irProperty("unknown", refType("NotRegistered_iface")),
       ]),
     ]);
@@ -551,8 +551,8 @@ describe("sub-binding wrapping", () => {
 
   it("setter stays simple even for known interface properties", () => {
     const result = renderer.renderFile([
-      irInterface("Videos_iface"),
-      irInterface("Binding_iface", [], [
+      irInterface("Videos_iface", [irMethod("list", [irSig()])]),
+      irInterface("Binding_iface", [irMethod("fetch", [irSig()])], [
         irProperty("videos", refType("Videos_iface")),
       ]),
     ]);
