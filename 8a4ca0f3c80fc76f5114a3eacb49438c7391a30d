@@ -1,0 +1,33 @@
+package.json
+  e1077b237dd66419 10
+src/astUtils.ts
+  e1077b237dd66419 122-124,211
+src/extract.ts
+  e1077b237dd66419 76-83,85-87
+tests/integration.test.ts
+  e1077b237dd66419 1-93
+src/astToIR.ts
+  e1077b237dd66419 147
+.gitignore
+  e1077b237dd66419 7-8
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.8",
+  "base_commit_sha": "8a4ca0f3c80fc76f5114a3eacb49438c7391a30d",
+  "prompts": {
+    "e1077b237dd66419": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_20db78c6fffeMmEO5oDX1SUSOt",
+        "model": "anthropic/claude-opus-4-6"
+      },
+      "human_author": "Gyeongjae Choi",
+      "messages": [],
+      "total_additions": 112,
+      "total_deletions": 15,
+      "accepted_lines": 112,
+      "overriden_lines": 0
+    }
+  }
+}
