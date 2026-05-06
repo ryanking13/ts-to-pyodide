@@ -6,6 +6,7 @@ const PRIMITIVE_SIMPLE_TYPES = new Set(["str", "bool", "None", "Any", "Never"]);
 
 export type NativeTypeInfo = {
   pyType: string;
+  pyReturnType?: string;
   toPy?: string;
   toJs?: string;
 };
@@ -13,7 +14,9 @@ export type NativeTypeInfo = {
 export const NATIVE_TYPES: Record<string, NativeTypeInfo> = {
   Headers: {
     pyType: "dict[str, str] | list[tuple[str, str]] | JsProxy",
+    pyReturnType: "http.client.HTTPMessage",
     toJs: "_to_js_headers",
+    toPy: "_from_js_headers",
   },
 };
 

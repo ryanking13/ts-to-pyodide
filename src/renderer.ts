@@ -35,6 +35,9 @@ from typing import Any, TypedDict, overload
 import js
 from pyodide.ffi import JsBuffer, JsProxy, create_proxy, to_js
 
+def _call_js_method(binding: Any, method: str, *args: Any, **kwargs: Any) -> Any:
+    return js.Reflect.get(binding, method)(*args, **kwargs)
+
 def _jsnull_to_none(value: Any) -> Any:
     try:
         from pyodide.ffi import jsnull
@@ -80,6 +83,13 @@ def _to_js_headers(headers: dict[str, str] | list[tuple[str, str]] | JsProxy) ->
     elif isinstance(headers, list):
         return js.Headers.new(headers)
     return headers
+
+def _from_js_headers(js_headers: Any) -> Any:
+    import http.client
+    result = http.client.HTTPMessage()
+    for key, val in js_headers:
+        result[key] = val
+    return result
 `;
 
 /**
@@ -267,7 +277,7 @@ export class Renderer {
     }
 
     const paramList = paramStrs.join(", ");
-    const returnType = renderType(returns, this.knownInterfaces);
+    const returnType = this.getNativeReturnType(returns) ?? renderType(returns, this.knownInterfaces);
 
     const argParts = params.map((p) => this.wrapArg(p));
     if (spreadParam) {
@@ -297,7 +307,7 @@ export class Renderer {
 
     const paramStrs = ["self", ...sig.params.map((p) => this.renderParam(p))];
     const paramList = paramStrs.join(", ");
-    const returnType = renderType(returns, this.knownInterfaces);
+    const returnType = this.getNativeReturnType(returns) ?? renderType(returns, this.knownInterfaces);
     const prefix = isAsync ? "async " : "";
 
     return `@overload\n${prefix}def ${pyName}(${paramList}) -> ${returnType}: ...`;
@@ -339,9 +349,18 @@ export class Renderer {
     const rawExpr = jsAttrAccess("self._binding", jsName);
 
     const isDataBag = wrapperClass ? this.dataBagNames.has(wrapperClass) : false;
+    const nativeToPy = this.getNativeToPy(typeIR);
     const toPy = needsToPy(typeIR);
     let getterBody: string;
-    if (wrapperClass && !isDataBag && nullable) {
+    if (nativeToPy && nullable) {
+      typeStr = this.getNativeReturnType(typeIR) ?? typeStr;
+      getterBody =
+        `    _v = ${rawExpr}\n` +
+        `    return ${nativeToPy}(_v) if _v is not None else None`;
+    } else if (nativeToPy) {
+      typeStr = this.getNativeReturnType(typeIR) ?? typeStr;
+      getterBody = `    return ${nativeToPy}(${rawExpr})`;
+    } else if (wrapperClass && !isDataBag && nullable) {
       getterBody =
         `    _v = ${rawExpr}\n` +
         `    return ${wrapperClass}.from_js(_v) if _v is not None else None`;
@@ -409,10 +428,20 @@ export class Renderer {
     const wrapperClass = resolveKnownInterface(returns, this.knownInterfaces);
     const isDataBag = wrapperClass ? this.dataBagNames.has(wrapperClass) : false;
     const nullable = isNullable(returns);
+    const nativeToPy = this.getNativeToPy(returns);
     const toPy = needsToPy(returns);
 
     if (isVoidReturn(returns)) {
       return `    ${rawCall}`;
+    }
+    if (nativeToPy && nullable) {
+      return (
+        `    _v = ${rawCall}\n` +
+        `    return ${nativeToPy}(_v) if _v is not None else None`
+      );
+    }
+    if (nativeToPy) {
+      return `    return ${nativeToPy}(${rawCall})`;
     }
     if (wrapperClass && !isDataBag && nullable) {
       return (
@@ -481,6 +510,20 @@ export class Renderer {
   private getNativeToJs(ir: TypeIR): string | undefined {
     if (ir.kind === "reference") {
       return NATIVE_TYPES[ir.name]?.toJs;
+    }
+    return undefined;
+  }
+
+  private getNativeToPy(ir: TypeIR): string | undefined {
+    if (ir.kind === "reference") {
+      return NATIVE_TYPES[ir.name]?.toPy;
+    }
+    return undefined;
+  }
+
+  private getNativeReturnType(ir: TypeIR): string | undefined {
+    if (ir.kind === "reference") {
+      return NATIVE_TYPES[ir.name]?.pyReturnType;
     }
     return undefined;
   }

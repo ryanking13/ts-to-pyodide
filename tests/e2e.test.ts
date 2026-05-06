@@ -168,6 +168,26 @@ describe("e2e: constructor (.d.ts → IR → renderFile)", () => {
   });
 });
 
+describe("e2e: email binding (.d.ts → IR → renderFile)", () => {
+  it("email_binding: SendEmail + ForwardableEmailMessage with reserved words, native types, data bags", () => {
+    const inputDts = readFileSync(
+      resolve(FIXTURES_DIR, "email_binding", "input.d.ts"),
+      "utf-8",
+    );
+    const expectedPy = readFileSync(
+      resolve(FIXTURES_DIR, "email_binding", "expected.py"),
+      "utf-8",
+    );
+
+    const project = makeProject();
+    project.createSourceFile("/fixture.d.ts", inputDts);
+    const result = convertToIR([project.getSourceFileOrThrow("/fixture.d.ts")]);
+
+    const output = renderer.renderFile(result.topLevels.ifaces);
+    assert.strictEqual(output, expectedPy);
+  });
+});
+
 describe("e2e: declare module extraction (.d.ts → IR → renderFile)", () => {
   it("declare_module: class from declare module + top-level interface", () => {
     const inputDts = readFileSync(

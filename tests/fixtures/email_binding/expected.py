@@ -59,11 +59,11 @@ def _from_js_headers(js_headers: Any) -> Any:
         result[key] = val
     return result
 
-class PipelineEntrypoint:
+class SendEmail:
     _binding: Any
 
     @classmethod
-    def from_js(cls, js_obj: JsProxy) -> PipelineEntrypoint:
+    def from_js(cls, js_obj: JsProxy) -> SendEmail:
         instance = object.__new__(cls)
         instance._binding = js_obj
         return instance
@@ -75,15 +75,15 @@ class PipelineEntrypoint:
     def __getattr__(self, name: str) -> Any:
         return getattr(self._binding, name)
 
-    async def run(self, records: list[Any]) -> list[Any]:
-        return await self._binding.run(to_js(records))
+    async def send(self, message: EmailMessage) -> EmailSendResult:
+        return _from_js_opts(await _call_js_method(self._binding, "send", _to_js_opts(message)))
 
 
-class Pipeline:
+class ForwardableEmailMessage:
     _binding: Any
 
     @classmethod
-    def from_js(cls, js_obj: JsProxy) -> Pipeline:
+    def from_js(cls, js_obj: JsProxy) -> ForwardableEmailMessage:
         instance = object.__new__(cls)
         instance._binding = js_obj
         return instance
@@ -95,5 +95,32 @@ class Pipeline:
     def __getattr__(self, name: str) -> Any:
         return getattr(self._binding, name)
 
-    async def send(self, records: list[Any]) -> None:
-        await _call_js_method(self._binding, "send", to_js(records))
+    @property
+    def raw(self) -> Any:
+        return self._binding.raw
+
+    @property
+    def headers(self) -> http.client.HTTPMessage:
+        return _from_js_headers(self._binding.headers)
+
+    @property
+    def raw_size(self) -> int | float:
+        return self._binding.rawSize
+
+    def set_reject(self, reason: str) -> None:
+        self._binding.setReject(reason)
+
+    async def forward(self, rcpt_to: str, headers: dict[str, str] | list[tuple[str, str]] | JsProxy | None = None) -> EmailSendResult:
+        return _from_js_opts(await self._binding.forward(rcpt_to, _to_js_headers(headers) if headers is not None else None))
+
+    async def reply(self, message: EmailMessage) -> EmailSendResult:
+        return _from_js_opts(await self._binding.reply(_to_js_opts(message)))
+
+
+class EmailMessage(TypedDict):
+    from_: str
+    to: str
+
+
+class EmailSendResult(TypedDict):
+    message_id: str
