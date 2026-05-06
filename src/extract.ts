@@ -7,7 +7,7 @@ import {
 } from "./adjustments.js";
 
 import { convertFiles, ConversionResult, TopLevels } from "./astToIR.js";
-import { InterfaceIR } from "./ir.js";
+import { InterfaceIR, PropertyIR } from "./ir.js";
 
 function topologicalSortClasses(
   nameToCls: Map<string, InterfaceIR>,
@@ -71,7 +71,102 @@ function fixupClassBases(nameToCls: Map<string, InterfaceIR>): void {
   }
 }
 
+function flattenSyntheticTypes(topLevels: TopLevels): void {
+  const ifaces = topLevels.ifaces;
+  const byName = new Map(ifaces.map((ir) => [ir.name, ir]));
+
+  const parentToChildren = new Map<string, InterfaceIR[]>();
+  for (const ir of ifaces) {
+    const idx = ir.name.indexOf("__");
+    if (idx === -1) continue;
+    const parentName = ir.name.substring(0, idx);
+    let children = parentToChildren.get(parentName);
+    if (!children) {
+      children = [];
+      parentToChildren.set(parentName, children);
+    }
+    children.push(ir);
+  }
+
+  for (const [parentName] of parentToChildren) {
+    if (!byName.has(parentName)) {
+      const parent: InterfaceIR = {
+        kind: "interface",
+        name: parentName,
+        methods: [],
+        properties: [],
+        typeParams: [],
+        bases: [],
+      };
+      ifaces.push(parent);
+      byName.set(parentName, parent);
+    }
+  }
+
+  const toRemove = new Set<string>();
+
+  for (const [parentName, children] of parentToChildren) {
+    const parent = byName.get(parentName)!;
+
+    const allProps = new Map<string, PropertyIR>();
+    for (const child of children) {
+      for (const prop of child.properties) {
+        const existing = allProps.get(prop.name);
+        if (!existing) {
+          allProps.set(prop.name, { ...prop });
+        } else if (JSON.stringify(existing.type) !== JSON.stringify(prop.type)) {
+          const a = existing.type;
+          const b = prop.type;
+          if (a.kind === "simple" && b.kind === "simple" &&
+              a.text.startsWith("Literal[") && b.text.startsWith("Literal[")) {
+            existing.type = { kind: "simple", text: "bool" };
+          } else {
+            existing.type = { kind: "union", types: [a, b] };
+          }
+        }
+      }
+      toRemove.add(child.name);
+    }
+
+    const unionGroups = new Map<string, InterfaceIR[]>();
+    for (const child of children) {
+      const parts = child.name.substring(parentName.length + 2).split("__");
+      const groupKey = parts.slice(0, -1).join("__");
+      if (!parts[parts.length - 1].startsWith("Union")) continue;
+      let group = unionGroups.get(groupKey);
+      if (!group) {
+        group = [];
+        unionGroups.set(groupKey, group);
+      }
+      group.push(child);
+    }
+    for (const siblings of unionGroups.values()) {
+      if (siblings.length <= 1) continue;
+      const propNames = siblings.map(
+        (s) => new Set(s.properties.map((p) => p.name)),
+      );
+      const allUnionPropNames = new Set(propNames.flatMap((s) => [...s]));
+      for (const name of allUnionPropNames) {
+        const prop = allProps.get(name);
+        if (prop && !propNames.every((names) => names.has(name))) {
+          prop.isOptional = true;
+        }
+      }
+    }
+
+    for (const prop of allProps.values()) {
+      if (!parent.properties.some((p) => p.name === prop.name)) {
+        parent.properties.push(prop);
+      }
+    }
+    parent.bases = parent.bases.filter((b) => !toRemove.has(b.name));
+  }
+
+  topLevels.ifaces = ifaces.filter((ir) => !toRemove.has(ir.name));
+}
+
 function adjustIR(topLevels: TopLevels): void {
+  flattenSyntheticTypes(topLevels);
   const classes = topLevels.ifaces;
   // Deduplicate interfaces with the same name, keeping the richer one.
   // TODO: Duplicates arise from declare module extraction and interface merging.

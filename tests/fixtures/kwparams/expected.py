@@ -65,6 +65,12 @@ class KVStore:
     def __getattr__(self, name: str) -> Any:
         return getattr(self._binding, name)
 
+    def __getitem__(self, key: str) -> Any:
+        return getattr(self, _to_snake(key))
+
+    def __setitem__(self, key: str, value: Any) -> None:
+        setattr(self, _to_snake(key), value)
+
     async def put(self, key: str, value: str, options: KVPutOptions | None = None) -> None:
         await self._binding.put(key, value, _to_js_opts(options))
 

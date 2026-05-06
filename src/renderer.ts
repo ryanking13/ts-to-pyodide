@@ -99,17 +99,54 @@ export class Renderer {
     this.knownInterfaces = buildKnownInterfacesMap(
       deduped.map((ir) => ir.name),
     );
-    this.dataBagNames = new Set();
-    for (const ir of deduped) {
-      if (this.isDataBag(ir)) {
-        this.dataBagNames.add(ir.name);
-        this.dataBagNames.add(stripIfaceSuffix(ir.name));
-      }
-    }
+    this.dataBagNames = this.classifyDataBags(deduped);
     const bodies = deduped.map((ir) =>
       this.dataBagNames.has(ir.name) ? this.renderTypedDict(ir) : this.renderInterface(ir),
     );
     return PRELUDE + "\n" + bodies.join("\n\n");
+  }
+
+  private classifyDataBags(interfaces: InterfaceIR[]): Set<string> {
+    const candidates = new Set<string>();
+    for (const ir of interfaces) {
+      if (this.isDataBag(ir)) {
+        candidates.add(ir.name);
+        candidates.add(stripIfaceSuffix(ir.name));
+      }
+    }
+    let changed = true;
+    while (changed) {
+      changed = false;
+      for (const ir of interfaces) {
+        if (!candidates.has(ir.name)) continue;
+        if (this.hasWrapperClassRefs(ir, candidates)) {
+          candidates.delete(ir.name);
+          candidates.delete(stripIfaceSuffix(ir.name));
+          changed = true;
+        }
+      }
+    }
+    return candidates;
+  }
+
+  private hasWrapperClassRefs(ir: InterfaceIR, dataBags: Set<string>): boolean {
+    for (const prop of ir.properties) {
+      if (this.typeRefsWrapperClass(prop.type, dataBags)) return true;
+    }
+    return false;
+  }
+
+  private typeRefsWrapperClass(ir: TypeIR, dataBags: Set<string>): boolean {
+    if (ir.kind === "reference") {
+      return this.knownInterfaces.has(ir.name) && !dataBags.has(ir.name);
+    }
+    if (ir.kind === "union") {
+      return ir.types.some((t) => this.typeRefsWrapperClass(t, dataBags));
+    }
+    if (ir.kind === "array") {
+      return this.typeRefsWrapperClass(ir.type, dataBags);
+    }
+    return false;
   }
 
   // A TypeScript object that only has properties and no methods is considered a data bag
@@ -129,7 +166,10 @@ export class Renderer {
     const lines = [`class ${className}(TypedDict${total}):`];
     for (const prop of ir.properties) {
       const pyName = toPythonName(prop.name);
-      const typeStr = renderType(prop.type, this.knownInterfaces);
+      let typeStr = renderType(prop.type, this.knownInterfaces);
+      if (prop.isOptional && !allOptional && !isNullable(prop.type)) {
+        typeStr += " | None";
+      }
       lines.push(`    ${pyName}: ${typeStr}`);
     }
     return lines.join("\n") + "\n";
@@ -180,6 +220,12 @@ export class Renderer {
       "",
       "    def __getattr__(self, name: str) -> Any:",
       "        return getattr(self._binding, name)",
+      "",
+      "    def __getitem__(self, key: str) -> Any:",
+      "        return getattr(self, _to_snake(key))",
+      "",
+      "    def __setitem__(self, key: str, value: Any) -> None:",
+      "        setattr(self, _to_snake(key), value)",
     );
 
     for (const prop of ir.properties) {
@@ -343,19 +389,19 @@ export class Renderer {
     let getterBody: string;
     if (wrapperClass && !isDataBag && nullable) {
       getterBody =
-        `    _v = ${rawExpr}\n` +
+        `    _v = _jsnull_to_none(${rawExpr})\n` +
         `    return ${wrapperClass}.from_js(_v) if _v is not None else None`;
     } else if (wrapperClass && !isDataBag) {
       getterBody = `    return ${wrapperClass}.from_js(${rawExpr})`;
     } else if (isDataBag && nullable) {
       getterBody =
-        `    _v = ${rawExpr}\n` +
+        `    _v = _jsnull_to_none(${rawExpr})\n` +
         `    return _from_js_opts(_v) if _v is not None else None`;
     } else if (isDataBag) {
       getterBody = `    return _from_js_opts(${rawExpr})`;
     } else if (toPy && nullable) {
       getterBody =
-        `    _v = ${rawExpr}\n` +
+        `    _v = _jsnull_to_none(${rawExpr})\n` +
         `    return _v.to_py() if _v is not None else None`;
     } else if (toPy) {
       getterBody = `    return ${rawExpr}.to_py()`;
@@ -416,7 +462,7 @@ export class Renderer {
     }
     if (wrapperClass && !isDataBag && nullable) {
       return (
-        `    _v = ${rawCall}\n` +
+        `    _v = _jsnull_to_none(${rawCall})\n` +
         `    return ${wrapperClass}.from_js(_v) if _v is not None else None`
       );
     }
@@ -425,7 +471,7 @@ export class Renderer {
     }
     if (isDataBag && nullable) {
       return (
-        `    _v = ${rawCall}\n` +
+        `    _v = _jsnull_to_none(${rawCall})\n` +
         `    return _from_js_opts(_v) if _v is not None else None`
       );
     }
@@ -474,6 +520,9 @@ export class Renderer {
   private isDataBagType(ir: TypeIR): boolean {
     if (ir.kind === "reference") {
       return this.dataBagNames.has(ir.name);
+    }
+    if (ir.kind === "array") {
+      return this.isDataBagType(ir.type);
     }
     return false;
   }

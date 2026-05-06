@@ -98,6 +98,19 @@ interface R2MultipartUpload {
     complete(uploadedParts: R2UploadedPart[]): Promise<R2Object>;
 }
 
+type R2Objects = {
+    objects: R2Object[];
+    delimitedPrefixes: string[];
+} & (
+    | {
+        truncated: true;
+        cursor: string;
+    }
+    | {
+        truncated: false;
+    }
+);
+
 interface R2Bucket {
     head(key: string): Promise<R2Object | null>;
     get(key: string, options?: R2GetOptions): Promise<R2ObjectBody | null>;
@@ -112,7 +125,7 @@ interface R2Bucket {
     ): Promise<R2MultipartUpload>;
     resumeMultipartUpload(key: string, uploadId: string): R2MultipartUpload;
     delete(keys: string | string[]): Promise<void>;
-    list(options?: R2ListOptions): Promise<any>;
+    list(options?: R2ListOptions): Promise<R2Objects>;
 }
 
 declare var bucket: R2Bucket[];
