@@ -23,12 +23,24 @@ def _to_snake(s: str) -> str:
 def _to_js_opts(opts: Any) -> Any:
     if opts is None:
         return None
-    return to_js({_to_camel(k): v for k, v in opts.items() if v is not None})
+    def _convert(v: Any) -> Any:
+        if isinstance(v, dict):
+            return {_to_camel(k): _convert(val) for k, val in v.items() if val is not None}
+        if isinstance(v, list):
+            return [_convert(item) for item in v]
+        return v
+    return to_js(_convert(opts))
 
 def _from_js_opts(js_obj: Any) -> Any:
     if js_obj is None:
         return None
-    return {_to_snake(k): v for k, v in js_obj.to_py().items()}
+    def _convert(v: Any) -> Any:
+        if isinstance(v, dict):
+            return {_to_snake(k): _convert(val) for k, val in v.items()}
+        if isinstance(v, list):
+            return [_convert(item) for item in v]
+        return v
+    return _convert(js_obj.to_py())
 
 def _to_js_headers(headers: dict[str, str] | list[tuple[str, str]] | JsProxy) -> JsProxy:
     if isinstance(headers, dict):
