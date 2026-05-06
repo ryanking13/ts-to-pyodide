@@ -129,7 +129,10 @@ export class Renderer {
     const lines = [`class ${className}(TypedDict${total}):`];
     for (const prop of ir.properties) {
       const pyName = toPythonName(prop.name);
-      const typeStr = renderType(prop.type, this.knownInterfaces);
+      let typeStr = renderType(prop.type, this.knownInterfaces);
+      if (prop.isOptional && !allOptional && !isNullable(prop.type)) {
+        typeStr += " | None";
+      }
       lines.push(`    ${pyName}: ${typeStr}`);
     }
     return lines.join("\n") + "\n";

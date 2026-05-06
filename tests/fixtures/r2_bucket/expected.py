@@ -150,8 +150,8 @@ class R2Bucket:
     async def delete(self, keys: str | list[str]) -> None:
         await self._binding.delete(to_js(keys))
 
-    async def list(self, options: R2ListOptions | None = None) -> Any:
-        return await self._binding.list(_to_js_opts(options))
+    async def list(self, options: R2ListOptions | None = None) -> R2Objects:
+        return _from_js_opts(await self._binding.list(_to_js_opts(options)))
 
     async def __getitem__(self, key: str, options: R2GetOptions | None = None) -> R2ObjectBody | None:
         _v = _jsnull_to_none(await self._binding.__getitem__(key, _to_js_opts(options)))
@@ -319,3 +319,10 @@ class R2StringChecksums(TypedDict, total=False):
 class R2UploadedPart(TypedDict):
     part_number: int | float
     etag: str
+
+
+class R2Objects(TypedDict):
+    objects: list[R2Object]
+    delimited_prefixes: list[str]
+    truncated: bool
+    cursor: str | None
