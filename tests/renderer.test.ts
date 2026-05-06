@@ -404,7 +404,7 @@ describe("callable param conversion", () => {
 describe("renderFile", () => {
   it("includes prelude with pyodide imports", () => {
     const result = renderer.renderFile([irInterface("X_iface")]);
-    assert.ok(result.includes("from typing import Any, overload"));
+    assert.ok(result.includes("from typing import Any, TypedDict, overload"));
     assert.ok(result.includes("from pyodide.ffi import JsBuffer, JsProxy, create_proxy, to_js"));
     assert.ok(result.includes("def _jsnull_to_none"));
   });
@@ -460,7 +460,7 @@ describe("sub-binding wrapping", () => {
       irInterface("Videos_iface", [
         irMethod("list", [irSig([], promiseOf({ kind: "simple", text: "Any" }))]),
       ]),
-      irInterface("Binding_iface", [], [
+      irInterface("Binding_iface", [irMethod("fetch", [irSig()])], [
         irProperty("videos", refType("Videos_iface")),
       ]),
     ]);
@@ -470,7 +470,7 @@ describe("sub-binding wrapping", () => {
 
   it("property typed as unknown interface stays as Any", () => {
     const result = renderer.renderFile([
-      irInterface("Binding_iface", [], [
+      irInterface("Binding_iface", [irMethod("fetch", [irSig()])], [
         irProperty("unknown", refType("NotRegistered_iface")),
       ]),
     ]);
@@ -512,8 +512,8 @@ describe("sub-binding wrapping", () => {
 
   it("nullable known interface property uses conditional wrapping", () => {
     const result = renderer.renderFile([
-      irInterface("Meta_iface"),
-      irInterface("Obj_iface", [], [
+      irInterface("Meta_iface", [irMethod("info", [irSig()])]),
+      irInterface("Obj_iface", [irMethod("fetch", [irSig()])], [
         irProperty("meta", refType("Meta_iface"), true, true),
       ]),
     ]);
@@ -551,8 +551,8 @@ describe("sub-binding wrapping", () => {
 
   it("setter stays simple even for known interface properties", () => {
     const result = renderer.renderFile([
-      irInterface("Videos_iface"),
-      irInterface("Binding_iface", [], [
+      irInterface("Videos_iface", [irMethod("list", [irSig()])]),
+      irInterface("Binding_iface", [irMethod("fetch", [irSig()])], [
         irProperty("videos", refType("Videos_iface")),
       ]),
     ]);
@@ -561,58 +561,8 @@ describe("sub-binding wrapping", () => {
   });
 });
 
-describe("kwparams", () => {
-  it("renders keyword-only params with * separator", () => {
-    const result = renderer.renderInterface(
-      irInterface("KV_iface", [
-        irMethod("put", [
-          irSigWithKwparams(
-            [irParam("key", { kind: "simple", text: "str" })],
-            [irParam("ttl", { kind: "number" }, true)],
-            promiseOf({ kind: "simple", text: "None" }),
-          ),
-        ]),
-      ]),
-    );
-    assert.ok(result.includes("async def put(self, key: str, *, ttl: int | float | None = None) -> None:"));
-  });
-
-  it("builds _opts dict with camelCase JS keys", () => {
-    const result = renderer.renderInterface(
-      irInterface("KV_iface", [
-        irMethod("put", [
-          irSigWithKwparams(
-            [irParam("key", { kind: "simple", text: "str" })],
-            [
-              irParam("expirationTtl", { kind: "number" }, true),
-              irParam("metadata", { kind: "simple", text: "Any" }, true),
-            ],
-          ),
-        ]),
-      ]),
-    );
-    assert.ok(result.includes('_opts: dict[str, Any] = {}'));
-    assert.ok(result.includes('if expiration_ttl is not None:'));
-    assert.ok(result.includes('_opts["expirationTtl"] = expiration_ttl'));
-    assert.ok(result.includes('if metadata is not None:'));
-    assert.ok(result.includes('_opts["metadata"] = metadata'));
-  });
-
-  it("passes _opts as last arg with to_js", () => {
-    const result = renderer.renderInterface(
-      irInterface("KV_iface", [
-        irMethod("put", [
-          irSigWithKwparams(
-            [irParam("key", { kind: "simple", text: "str" })],
-            [irParam("ttl", { kind: "number" }, true)],
-          ),
-        ]),
-      ]),
-    );
-    assert.ok(result.includes("self._binding.put(key, to_js(_opts) if _opts else None)"));
-  });
-
-  it("prefers kwparams sig over options-bag sig", () => {
+describe("options parameter", () => {
+  it("keeps options bag as typed parameter instead of destructuring", () => {
     const result = renderer.renderInterface(
       irInterface("KV_iface", [
         irMethod("put", [
@@ -631,12 +581,11 @@ describe("kwparams", () => {
         ]),
       ]),
     );
-    assert.ok(result.includes("*, ttl:"));
-    assert.ok(!result.includes("options"));
-    assert.ok(!result.includes("@overload"));
+    assert.ok(result.includes("options: Any"));
+    assert.ok(!result.includes("*, ttl:"));
   });
 
-  it("no kwparams falls through to normal rendering", () => {
+  it("no kwparams renders normally", () => {
     const result = renderer.renderInterface(
       irInterface("KV_iface", [
         irMethod("get", [

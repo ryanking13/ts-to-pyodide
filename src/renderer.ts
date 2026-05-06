@@ -20,8 +20,10 @@ import {
   isNullable,
   isPromise,
   isVoidReturn,
+  NATIVE_TYPES,
   needsCreateProxy,
   needsToJs,
+  needsToPy,
   renderType,
   resolveKnownInterface,
   unwrapPromise,
@@ -29,7 +31,7 @@ import {
 
 const PRELUDE = `\
 from __future__ import annotations
-from typing import Any, overload
+from typing import Any, TypedDict, overload
 import js
 from pyodide.ffi import JsBuffer, JsProxy, create_proxy, to_js
 
@@ -41,6 +43,43 @@ def _jsnull_to_none(value: Any) -> Any:
     if value is jsnull:
         return None
     return value
+
+def _to_camel(s: str) -> str:
+    parts = s.split("_")
+    return parts[0] + "".join(p.capitalize() for p in parts[1:])
+
+def _to_snake(s: str) -> str:
+    import re
+    return re.sub(r"([a-z0-9])([A-Z])", r"\\1_\\2", s).lower()
+
+def _to_js_opts(opts: Any) -> Any:
+    if opts is None:
+        return None
+    def _convert(v: Any) -> Any:
+        if isinstance(v, dict):
+            return {_to_camel(k): _convert(val) for k, val in v.items() if val is not None}
+        if isinstance(v, list):
+            return [_convert(item) for item in v]
+        return v
+    return to_js(_convert(opts))
+
+def _from_js_opts(js_obj: Any) -> Any:
+    if js_obj is None:
+        return None
+    def _convert(v: Any) -> Any:
+        if isinstance(v, dict):
+            return {_to_snake(k): _convert(val) for k, val in v.items()}
+        if isinstance(v, list):
+            return [_convert(item) for item in v]
+        return v
+    return _convert(js_obj.to_py())
+
+def _to_js_headers(headers: dict[str, str] | list[tuple[str, str]] | JsProxy) -> JsProxy:
+    if isinstance(headers, dict):
+        return js.Headers.new(list(headers.items()))
+    elif isinstance(headers, list):
+        return js.Headers.new(headers)
+    return headers
 `;
 
 /**
@@ -50,6 +89,7 @@ export class Renderer {
   // Map of interface names to their Python class names
   // This is used to resolve interface types that are returned from methods
   private knownInterfaces: Map<string, string> = new Map();
+  private dataBagNames: Set<string> = new Set();
 
   // TODO: accept optional constructor name map (JSON config) to emit a
   // CONSTRUCTOR_MAP dict for runtime dispatch (e.g. KVNamespace → KvNamespace).
@@ -59,8 +99,40 @@ export class Renderer {
     this.knownInterfaces = buildKnownInterfacesMap(
       deduped.map((ir) => ir.name),
     );
-    const bodies = deduped.map((ir) => this.renderInterface(ir));
+    this.dataBagNames = new Set();
+    for (const ir of deduped) {
+      if (this.isDataBag(ir)) {
+        this.dataBagNames.add(ir.name);
+        this.dataBagNames.add(stripIfaceSuffix(ir.name));
+      }
+    }
+    const bodies = deduped.map((ir) =>
+      this.dataBagNames.has(ir.name) ? this.renderTypedDict(ir) : this.renderInterface(ir),
+    );
     return PRELUDE + "\n" + bodies.join("\n\n");
+  }
+
+  // A TypeScript object that only has properties and no methods is considered a data bag
+  // In python, we pass it as a TypedDict not a class which is more pythonic
+  private isDataBag(ir: InterfaceIR): boolean {
+    if (ir.constructors && ir.constructors.length > 0) return false;
+    const hasMethods = ir.methods.some(
+      (m) => m.name !== "__call__" && m.name && !m.isStatic,
+    );
+    return !hasMethods && ir.properties.length > 0;
+  }
+
+  private renderTypedDict(ir: InterfaceIR): string {
+    const className = stripIfaceSuffix(ir.name);
+    const allOptional = ir.properties.every((p) => p.isOptional);
+    const total = allOptional ? ", total=False" : "";
+    const lines = [`class ${className}(TypedDict${total}):`];
+    for (const prop of ir.properties) {
+      const pyName = toPythonName(prop.name);
+      const typeStr = renderType(prop.type, this.knownInterfaces);
+      lines.push(`    ${pyName}: ${typeStr}`);
+    }
+    return lines.join("\n") + "\n";
   }
 
   private deduplicateInterfaces(interfaces: InterfaceIR[]): InterfaceIR[] {
@@ -156,20 +228,20 @@ export class Renderer {
 
     const pyName = toPythonName(jsName);
 
-    const kwSig = sigs.find((s) => s.kwparams?.length);
-    if (kwSig) {
-      return this.renderKwparamsSig(jsName, pyName, kwSig);
-    }
+    // Filter out kwparams-destructured sigs — we keep the original options parameter
+    // and render it as a TypedDict instead of spreading into keyword args.
+    const nonKwSigs = sigs.filter((s) => !s.kwparams?.length);
+    const effectiveSigs = nonKwSigs.length > 0 ? nonKwSigs : sigs;
 
-    if (sigs.length === 1) {
-      return this.renderSingleSig(jsName, pyName, sigs[0]);
+    if (effectiveSigs.length === 1) {
+      return this.renderSingleSig(jsName, pyName, effectiveSigs[0]);
     }
 
     const parts: string[] = [];
-    for (const sig of sigs) {
+    for (const sig of effectiveSigs) {
       parts.push(this.renderOverloadStub(pyName, sig));
     }
-    parts.push(this.renderOverloadImpl(jsName, pyName, sigs));
+    parts.push(this.renderOverloadImpl(jsName, pyName, effectiveSigs));
     return parts.join("\n");
   }
 
@@ -214,55 +286,6 @@ export class Renderer {
     return `${prefix}def ${pyName}(${paramList}) -> ${returnType}:\n${body}`;
   }
 
-  private renderKwparamsSig(
-    jsName: string,
-    pyName: string,
-    sig: SigIR,
-  ): string {
-    const params = sig.params;
-    const kwparams = sig.kwparams!;
-    let returns = sig.returns;
-
-    const isAsync = isPromise(returns);
-    if (isAsync) {
-      returns = unwrapPromise(returns);
-    }
-
-    const paramStrs = ["self", ...params.map((p) => this.renderParam(p))];
-    paramStrs.push("*");
-    for (const kw of kwparams) {
-      const kwName = toPythonName(kw.name);
-      const kwType = renderType(kw.type, this.knownInterfaces);
-      paramStrs.push(`${kwName}: ${kwType} | None = None`);
-    }
-
-    const paramList = paramStrs.join(", ");
-    const returnType = renderType(returns, this.knownInterfaces);
-
-    const argParts = params.map((p) => this.wrapArg(p));
-
-    const bodyLines: string[] = [];
-    bodyLines.push("    _opts: dict[str, Any] = {}");
-    for (const kw of kwparams) {
-      const kwName = toPythonName(kw.name);
-      bodyLines.push(`    if ${kwName} is not None:`);
-      bodyLines.push(`        _opts["${kw.name}"] = ${kwName}`);
-    }
-
-    argParts.push("to_js(_opts) if _opts else None");
-    const argList = argParts.join(", ");
-
-    let rawCall = jsMethodCall("self._binding", jsName, argList);
-    if (isAsync) {
-      rawCall = `await ${rawCall}`;
-    }
-
-    const returnBody = this.wrapReturn(rawCall, returns);
-    bodyLines.push(returnBody);
-
-    const prefix = isAsync ? "async " : "";
-    return `${prefix}def ${pyName}(${paramList}) -> ${returnType}:\n${bodyLines.join("\n")}`;
-  }
 
   private renderOverloadStub(pyName: string, sig: SigIR): string {
     let returns = sig.returns;
@@ -308,20 +331,34 @@ export class Renderer {
     const nullable = isOptional || isNullable(typeIR);
 
     let typeStr = renderType(typeIR, this.knownInterfaces);
-    if (isOptional) {
+    if (isOptional && !isNullable(typeIR)) {
       typeStr += " | None";
     }
 
     const wrapperClass = resolveKnownInterface(typeIR, this.knownInterfaces);
     const rawExpr = jsAttrAccess("self._binding", jsName);
 
+    const isDataBag = wrapperClass ? this.dataBagNames.has(wrapperClass) : false;
+    const toPy = needsToPy(typeIR);
     let getterBody: string;
-    if (wrapperClass && nullable) {
+    if (wrapperClass && !isDataBag && nullable) {
       getterBody =
         `    _v = ${rawExpr}\n` +
         `    return ${wrapperClass}.from_js(_v) if _v is not None else None`;
-    } else if (wrapperClass) {
+    } else if (wrapperClass && !isDataBag) {
       getterBody = `    return ${wrapperClass}.from_js(${rawExpr})`;
+    } else if (isDataBag && nullable) {
+      getterBody =
+        `    _v = ${rawExpr}\n` +
+        `    return _from_js_opts(_v) if _v is not None else None`;
+    } else if (isDataBag) {
+      getterBody = `    return _from_js_opts(${rawExpr})`;
+    } else if (toPy && nullable) {
+      getterBody =
+        `    _v = ${rawExpr}\n` +
+        `    return _v.to_py() if _v is not None else None`;
+    } else if (toPy) {
+      getterBody = `    return ${rawExpr}.to_py()`;
     } else if (nullable) {
       getterBody = `    return _jsnull_to_none(${rawExpr})`;
     } else {
@@ -356,6 +393,9 @@ export class Renderer {
     const name = toPythonName(param.name);
     const typeStr = renderType(param.type, this.knownInterfaces);
     if (param.isOptional) {
+      if (isNullable(param.type)) {
+        return `${name}: ${typeStr} = None`;
+      }
       return `${name}: ${typeStr} | None = None`;
     }
     return `${name}: ${typeStr}`;
@@ -367,19 +407,39 @@ export class Renderer {
   // function expects cloning or not...
   private wrapReturn(rawCall: string, returns: TypeIR): string {
     const wrapperClass = resolveKnownInterface(returns, this.knownInterfaces);
+    const isDataBag = wrapperClass ? this.dataBagNames.has(wrapperClass) : false;
     const nullable = isNullable(returns);
+    const toPy = needsToPy(returns);
 
     if (isVoidReturn(returns)) {
       return `    ${rawCall}`;
     }
-    if (wrapperClass && nullable) {
+    if (wrapperClass && !isDataBag && nullable) {
       return (
         `    _v = ${rawCall}\n` +
         `    return ${wrapperClass}.from_js(_v) if _v is not None else None`
       );
     }
-    if (wrapperClass) {
+    if (wrapperClass && !isDataBag) {
       return `    return ${wrapperClass}.from_js(${rawCall})`;
+    }
+    if (isDataBag && nullable) {
+      return (
+        `    _v = ${rawCall}\n` +
+        `    return _from_js_opts(_v) if _v is not None else None`
+      );
+    }
+    if (isDataBag) {
+      return `    return _from_js_opts(${rawCall})`;
+    }
+    if (toPy && nullable) {
+      return (
+        `    _v = ${rawCall}\n` +
+        `    return _v.to_py() if _v is not None else None`
+      );
+    }
+    if (toPy) {
+      return `    return (${rawCall}).to_py()`;
     }
     if (nullable) {
       return `    return _jsnull_to_none(${rawCall})`;
@@ -392,6 +452,16 @@ export class Renderer {
     if (needsCreateProxy(param.type)) {
       return `create_proxy(${name})`;
     }
+    const nativeToJs = this.getNativeToJs(param.type);
+    if (nativeToJs) {
+      if (param.isOptional) {
+        return `${nativeToJs}(${name}) if ${name} is not None else None`;
+      }
+      return `${nativeToJs}(${name})`;
+    }
+    if (this.isDataBagType(param.type)) {
+      return `_to_js_opts(${name})`;
+    }
     if (needsToJs(param.type)) {
       if (param.isOptional) {
         return `to_js(${name}) if ${name} is not None else None`;
@@ -399,5 +469,19 @@ export class Renderer {
       return `to_js(${name})`;
     }
     return name;
+  }
+
+  private isDataBagType(ir: TypeIR): boolean {
+    if (ir.kind === "reference") {
+      return this.dataBagNames.has(ir.name);
+    }
+    return false;
+  }
+
+  private getNativeToJs(ir: TypeIR): string | undefined {
+    if (ir.kind === "reference") {
+      return NATIVE_TYPES[ir.name]?.toJs;
+    }
+    return undefined;
   }
 }

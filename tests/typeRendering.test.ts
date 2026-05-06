@@ -82,6 +82,42 @@ describe("renderType", () => {
     assert.strictEqual(renderType(ir), "Any");
   });
 
+  it("Record<string, string> renders as dict[str, str]", () => {
+    const ir: TypeIR = {
+      kind: "reference",
+      name: "Record",
+      typeArgs: [
+        { kind: "simple", text: "str" },
+        { kind: "simple", text: "str" },
+      ],
+    };
+    assert.strictEqual(renderType(ir), "dict[str, str]");
+  });
+
+  it("Record<string, number> renders as dict[str, int | float]", () => {
+    const ir: TypeIR = {
+      kind: "reference",
+      name: "Record",
+      typeArgs: [
+        { kind: "simple", text: "str" },
+        { kind: "number" },
+      ],
+    };
+    assert.strictEqual(renderType(ir), "dict[str, int | float]");
+  });
+
+  it("Headers renders as native type", () => {
+    const ir: TypeIR = {
+      kind: "reference",
+      name: "Headers",
+      typeArgs: [],
+    };
+    assert.strictEqual(
+      renderType(ir),
+      "dict[str, str] | list[tuple[str, str]] | JsProxy",
+    );
+  });
+
   it("paren", () => {
     const ir: TypeIR = { kind: "paren", type: { kind: "simple", text: "str" } };
     assert.strictEqual(renderType(ir), "(str)");
