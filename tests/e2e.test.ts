@@ -108,6 +108,26 @@ describe("e2e: sub-binding wrapping (.d.ts → IR → renderFile)", () => {
   });
 });
 
+describe("e2e: R2 bucket (.d.ts → IR → renderFile)", () => {
+  it("r2_bucket: binding interface with declare class, sub-binding wrapping, kwparams", () => {
+    const inputDts = readFileSync(
+      resolve(FIXTURES_DIR, "r2_bucket", "input.d.ts"),
+      "utf-8",
+    );
+    const expectedPy = readFileSync(
+      resolve(FIXTURES_DIR, "r2_bucket", "expected.py"),
+      "utf-8",
+    );
+
+    const project = makeProject();
+    project.createSourceFile("/fixture.d.ts", inputDts);
+    const result = convertToIR([project.getSourceFileOrThrow("/fixture.d.ts")]);
+
+    const output = renderer.renderFile(result.topLevels.ifaces);
+    assert.strictEqual(output, expectedPy);
+  });
+});
+
 describe("e2e: constructor (.d.ts → IR → renderFile)", () => {
   it("constructor: declare class with constructor produces __init__", () => {
     const inputDts = readFileSync(

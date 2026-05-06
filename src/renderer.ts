@@ -22,6 +22,7 @@ import {
   isVoidReturn,
   needsCreateProxy,
   needsToJs,
+  needsToPy,
   renderType,
   resolveKnownInterface,
   unwrapPromise,
@@ -315,6 +316,7 @@ export class Renderer {
     const wrapperClass = resolveKnownInterface(typeIR, this.knownInterfaces);
     const rawExpr = jsAttrAccess("self._binding", jsName);
 
+    const toPy = needsToPy(typeIR);
     let getterBody: string;
     if (wrapperClass && nullable) {
       getterBody =
@@ -322,6 +324,12 @@ export class Renderer {
         `    return ${wrapperClass}.from_js(_v) if _v is not None else None`;
     } else if (wrapperClass) {
       getterBody = `    return ${wrapperClass}.from_js(${rawExpr})`;
+    } else if (toPy && nullable) {
+      getterBody =
+        `    _v = ${rawExpr}\n` +
+        `    return _v.to_py() if _v is not None else None`;
+    } else if (toPy) {
+      getterBody = `    return ${rawExpr}.to_py()`;
     } else if (nullable) {
       getterBody = `    return _jsnull_to_none(${rawExpr})`;
     } else {
@@ -368,6 +376,7 @@ export class Renderer {
   private wrapReturn(rawCall: string, returns: TypeIR): string {
     const wrapperClass = resolveKnownInterface(returns, this.knownInterfaces);
     const nullable = isNullable(returns);
+    const toPy = needsToPy(returns);
 
     if (isVoidReturn(returns)) {
       return `    ${rawCall}`;
@@ -380,6 +389,15 @@ export class Renderer {
     }
     if (wrapperClass) {
       return `    return ${wrapperClass}.from_js(${rawCall})`;
+    }
+    if (toPy && nullable) {
+      return (
+        `    _v = ${rawCall}\n` +
+        `    return _v.to_py() if _v is not None else None`
+      );
+    }
+    if (toPy) {
+      return `    return (${rawCall}).to_py()`;
     }
     if (nullable) {
       return `    return _jsnull_to_none(${rawCall})`;
