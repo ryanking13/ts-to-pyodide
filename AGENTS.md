@@ -156,3 +156,5 @@ TypedDict-typed returns/properties use `_from_js_opts()` which converts camelCas
 - Do not remove existing comments unless it is obvously redundant.
 - Keep the existing code style and formatting.
 - Always use uv for Python dependency and package management and testing.
+- When a user asks to create a test fixture from existing types e.g. @cloudflare/workers-types,
+  make sure to copy the exact same type from the source, not parse and recreate it.
