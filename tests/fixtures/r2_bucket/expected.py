@@ -12,6 +12,9 @@ def _jsnull_to_none(value: Any) -> Any:
         return None
     return value
 
+def _build_opts(**kwargs: Any) -> dict[str, Any]:
+    return {k: v for k, v in kwargs.items() if v is not None}
+
 class R2Object:
     _binding: Any
 
@@ -98,42 +101,16 @@ class R2Bucket:
         return R2Object.from_js(_v) if _v is not None else None
 
     async def get(self, key: str, *, only_if: R2Conditional | Any | None | None = None, range: Any | None = None, ssec_key: JsBuffer | str | None | None = None) -> R2ObjectBody | None:
-        _opts: dict[str, Any] = {}
-        if only_if is not None:
-            _opts["onlyIf"] = only_if
-        if range is not None:
-            _opts["range"] = range
-        if ssec_key is not None:
-            _opts["ssecKey"] = ssec_key
+        _opts = _build_opts(onlyIf=only_if, range=range, ssecKey=ssec_key)
         _v = await self._binding.get(key, to_js(_opts) if _opts else None)
         return R2ObjectBody.from_js(_v) if _v is not None else None
 
     async def put(self, key: str, value: Any | JsBuffer | str | Any | None, *, only_if: R2Conditional | Any | None | None = None, http_metadata: R2HTTPMetadata | Any | None | None = None, custom_metadata: dict[str, str] | None = None, md5: JsBuffer | str | None | None = None, sha256: JsBuffer | str | None | None = None, storage_class: str | None = None, ssec_key: JsBuffer | str | None | None = None) -> R2Object:
-        _opts: dict[str, Any] = {}
-        if only_if is not None:
-            _opts["onlyIf"] = only_if
-        if http_metadata is not None:
-            _opts["httpMetadata"] = http_metadata
-        if custom_metadata is not None:
-            _opts["customMetadata"] = custom_metadata
-        if md5 is not None:
-            _opts["md5"] = md5
-        if sha256 is not None:
-            _opts["sha256"] = sha256
-        if storage_class is not None:
-            _opts["storageClass"] = storage_class
-        if ssec_key is not None:
-            _opts["ssecKey"] = ssec_key
+        _opts = _build_opts(onlyIf=only_if, httpMetadata=http_metadata, customMetadata=custom_metadata, md5=md5, sha256=sha256, storageClass=storage_class, ssecKey=ssec_key)
         return R2Object.from_js(await self._binding.put(key, to_js(value), to_js(_opts) if _opts else None))
 
     async def create_multipart_upload(self, key: str, *, http_metadata: R2HTTPMetadata | Any | None | None = None, custom_metadata: dict[str, str] | None = None, storage_class: str | None = None) -> R2MultipartUpload:
-        _opts: dict[str, Any] = {}
-        if http_metadata is not None:
-            _opts["httpMetadata"] = http_metadata
-        if custom_metadata is not None:
-            _opts["customMetadata"] = custom_metadata
-        if storage_class is not None:
-            _opts["storageClass"] = storage_class
+        _opts = _build_opts(httpMetadata=http_metadata, customMetadata=custom_metadata, storageClass=storage_class)
         return R2MultipartUpload.from_js(await self._binding.createMultipartUpload(key, to_js(_opts) if _opts else None))
 
     def resume_multipart_upload(self, key: str, upload_id: str) -> R2MultipartUpload:
@@ -143,27 +120,11 @@ class R2Bucket:
         await self._binding.delete(to_js(keys))
 
     async def list(self, *, limit: int | float | None = None, prefix: str | None = None, cursor: str | None = None, delimiter: str | None = None, start_after: str | None = None) -> Any:
-        _opts: dict[str, Any] = {}
-        if limit is not None:
-            _opts["limit"] = limit
-        if prefix is not None:
-            _opts["prefix"] = prefix
-        if cursor is not None:
-            _opts["cursor"] = cursor
-        if delimiter is not None:
-            _opts["delimiter"] = delimiter
-        if start_after is not None:
-            _opts["startAfter"] = start_after
+        _opts = _build_opts(limit=limit, prefix=prefix, cursor=cursor, delimiter=delimiter, startAfter=start_after)
         return await self._binding.list(to_js(_opts) if _opts else None)
 
     async def __getitem__(self, key: str, *, only_if: R2Conditional | Any | None | None = None, range: Any | None = None, ssec_key: JsBuffer | str | None | None = None) -> R2ObjectBody | None:
-        _opts: dict[str, Any] = {}
-        if only_if is not None:
-            _opts["onlyIf"] = only_if
-        if range is not None:
-            _opts["range"] = range
-        if ssec_key is not None:
-            _opts["ssecKey"] = ssec_key
+        _opts = _build_opts(onlyIf=only_if, range=range, ssecKey=ssec_key)
         _v = await self._binding.__getitem__(key, to_js(_opts) if _opts else None)
         return R2ObjectBody.from_js(_v) if _v is not None else None
 

@@ -577,7 +577,7 @@ describe("kwparams", () => {
     assert.ok(result.includes("async def put(self, key: str, *, ttl: int | float | None = None) -> None:"));
   });
 
-  it("builds _opts dict with camelCase JS keys", () => {
+  it("builds _opts with _build_opts helper using camelCase JS keys", () => {
     const result = renderer.renderInterface(
       irInterface("KV_iface", [
         irMethod("put", [
@@ -591,11 +591,7 @@ describe("kwparams", () => {
         ]),
       ]),
     );
-    assert.ok(result.includes('_opts: dict[str, Any] = {}'));
-    assert.ok(result.includes('if expiration_ttl is not None:'));
-    assert.ok(result.includes('_opts["expirationTtl"] = expiration_ttl'));
-    assert.ok(result.includes('if metadata is not None:'));
-    assert.ok(result.includes('_opts["metadata"] = metadata'));
+    assert.ok(result.includes("_build_opts(expirationTtl=expiration_ttl, metadata=metadata)"));
   });
 
   it("passes _opts as last arg with to_js", () => {

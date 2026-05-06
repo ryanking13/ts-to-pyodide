@@ -42,6 +42,9 @@ def _jsnull_to_none(value: Any) -> Any:
     if value is jsnull:
         return None
     return value
+
+def _build_opts(**kwargs: Any) -> dict[str, Any]:
+    return {k: v for k, v in kwargs.items() if v is not None}
 `;
 
 /**
@@ -243,12 +246,10 @@ export class Renderer {
     const argParts = params.map((p) => this.wrapArg(p));
 
     const bodyLines: string[] = [];
-    bodyLines.push("    _opts: dict[str, Any] = {}");
-    for (const kw of kwparams) {
-      const kwName = toPythonName(kw.name);
-      bodyLines.push(`    if ${kwName} is not None:`);
-      bodyLines.push(`        _opts["${kw.name}"] = ${kwName}`);
-    }
+    const kwArgs = kwparams.map(
+      (kw) => `${kw.name}=${toPythonName(kw.name)}`,
+    ).join(", ");
+    bodyLines.push(`    _opts = _build_opts(${kwArgs})`);
 
     argParts.push("to_js(_opts) if _opts else None");
     const argList = argParts.join(", ");

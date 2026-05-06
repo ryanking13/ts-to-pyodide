@@ -15,13 +15,7 @@ class KVStore:
         return getattr(self._binding, name)
 
     async def put(self, key: str, value: str, *, expiration: int | float | None = None, expiration_ttl: int | float | None = None, metadata: Any | None = None) -> None:
-        _opts: dict[str, Any] = {}
-        if expiration is not None:
-            _opts["expiration"] = expiration
-        if expiration_ttl is not None:
-            _opts["expirationTtl"] = expiration_ttl
-        if metadata is not None:
-            _opts["metadata"] = metadata
+        _opts = _build_opts(expiration=expiration, expirationTtl=expiration_ttl, metadata=metadata)
         await self._binding.put(key, value, to_js(_opts) if _opts else None)
 
     async def get(self, key: str) -> str | None:

@@ -12,6 +12,9 @@ def _jsnull_to_none(value: Any) -> Any:
         return None
     return value
 
+def _build_opts(**kwargs: Any) -> dict[str, Any]:
+    return {k: v for k, v in kwargs.items() if v is not None}
+
 class D1Database:
     _binding: Any
 
