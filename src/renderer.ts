@@ -30,6 +30,7 @@ import {
 const PRELUDE = `\
 from __future__ import annotations
 from typing import Any, overload
+import js
 from pyodide.ffi import JsBuffer, JsProxy, create_proxy, to_js
 
 def _jsnull_to_none(value: Any) -> Any:
@@ -71,24 +72,53 @@ export class Renderer {
         byClassName.set(className, ir);
         continue;
       }
+      // Extract constructor signatures from the "new" static method before merging.
+      // declare class produces two IR entries: ClassName (with "new") and ClassName_iface
+      // (with instance members). We keep the richer one but preserve constructors.
+      const constructorSigs = this.extractConstructorSigs(ir) ??
+        this.extractConstructorSigs(existing);
+
       const existingSize = existing.methods.length + existing.properties.length;
       const newSize = ir.methods.length + ir.properties.length;
       if (newSize > existingSize) {
         byClassName.set(className, ir);
       }
+
+      if (constructorSigs) {
+        byClassName.get(className)!.constructors = constructorSigs;
+      }
     }
     return [...byClassName.values()];
   }
 
+  private extractConstructorSigs(ir: InterfaceIR): SigIR[] | undefined {
+    const newMethod = ir.methods.find(
+      (m) => m.name === "new" && m.isStatic,
+    );
+    if (!newMethod || newMethod.signatures.length === 0) return undefined;
+    return newMethod.signatures;
+  }
+
   renderInterface(ir: InterfaceIR): string {
     const className = stripIfaceSuffix(ir.name);
+    const constructors = ir.constructors;
 
     const lines = [
       `class ${className}:`,
       "    _binding: Any",
+    ];
+
+    if (constructors && constructors.length > 0) {
+      lines.push(...this.renderConstructor(className, constructors));
+    }
+
+    lines.push(
       "",
-      "    def __init__(self, binding: JsProxy) -> None:",
-      "        self._binding = binding",
+      "    @classmethod",
+      `    def from_js(cls, js_obj: JsProxy) -> ${className}:`,
+      "        instance = object.__new__(cls)",
+      "        instance._binding = js_obj",
+      "        return instance",
       "",
       "    @property",
       "    def js_object(self) -> JsProxy:",
@@ -96,7 +126,7 @@ export class Renderer {
       "",
       "    def __getattr__(self, name: str) -> Any:",
       "        return getattr(self._binding, name)",
-    ];
+    );
 
     for (const prop of ir.properties) {
       const rendered = this.renderProperty(prop);
@@ -118,12 +148,26 @@ export class Renderer {
     return lines.join("\n") + "\n";
   }
 
+  private renderConstructor(
+    className: string,
+    sigs: SigIR[],
+  ): string[] {
+    // TODO: render typed overload stubs for multiple constructor signatures.
+    return [
+      "",
+      `    def __init__(self, *args: Any, **kwargs: Any) -> None:`,
+      `        self._binding = js.${className}.new(*args, **kwargs)`,
+    ];
+  }
+
   private renderMethod(method: CallableIR): string {
     const jsName = method.name;
 
     // TODO: Should we support callable interfaces somehow?
     if (!jsName || jsName === "__call__") return "";
     if (!isValidPythonIdentifier(jsName)) return "";
+    // Skip "new" — constructor rendering is handled by renderConstructor
+    if (jsName === "new" && method.isStatic) return "";
 
     const sigs = method.signatures;
     if (sigs.length === 0) return "";
@@ -293,9 +337,9 @@ export class Renderer {
     if (wrapperClass && nullable) {
       getterBody =
         `    _v = ${rawExpr}\n` +
-        `    return ${wrapperClass}(_v) if _v is not None else None`;
+        `    return ${wrapperClass}.from_js(_v) if _v is not None else None`;
     } else if (wrapperClass) {
-      getterBody = `    return ${wrapperClass}(${rawExpr})`;
+      getterBody = `    return ${wrapperClass}.from_js(${rawExpr})`;
     } else if (nullable) {
       getterBody = `    return _jsnull_to_none(${rawExpr})`;
     } else {
@@ -349,11 +393,11 @@ export class Renderer {
     if (wrapperClass && nullable) {
       return (
         `    _v = ${rawCall}\n` +
-        `    return ${wrapperClass}(_v) if _v is not None else None`
+        `    return ${wrapperClass}.from_js(_v) if _v is not None else None`
       );
     }
     if (wrapperClass) {
-      return `    return ${wrapperClass}(${rawCall})`;
+      return `    return ${wrapperClass}.from_js(${rawCall})`;
     }
     if (nullable) {
       return `    return _jsnull_to_none(${rawCall})`;

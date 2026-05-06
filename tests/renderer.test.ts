@@ -3,7 +3,7 @@ import assert from "node:assert";
 import { readFileSync } from "fs";
 import { resolve } from "path";
 import { Renderer } from "../src/renderer";
-import { InterfaceIR } from "../src/ir";
+import { InterfaceIR, SigIR } from "../src/ir";
 import {
   FIXTURE_NAMES,
   FIXTURES_DIR,
@@ -423,7 +423,7 @@ describe("renderFile", () => {
     ]);
     assert.ok(result.includes("class A:"));
     assert.ok(result.includes("class B:"));
-    const classCount = result.split("def __init__").length - 1;
+    const classCount = result.split("def from_js").length - 1;
     assert.strictEqual(classCount, 2);
   });
 });
@@ -465,7 +465,7 @@ describe("sub-binding wrapping", () => {
       ]),
     ]);
     assert.ok(result.includes("def videos(self) -> Videos:"));
-    assert.ok(result.includes("return Videos(self._binding.videos)"));
+    assert.ok(result.includes("return Videos.from_js(self._binding.videos)"));
   });
 
   it("property typed as unknown interface stays as Any", () => {
@@ -494,7 +494,7 @@ describe("sub-binding wrapping", () => {
       ]),
     ]);
     assert.ok(result.includes("def prepare(self, query: str) -> Stmt:"));
-    assert.ok(result.includes("return Stmt(self._binding.prepare(query))"));
+    assert.ok(result.includes("return Stmt.from_js(self._binding.prepare(query))"));
   });
 
   it("async method returning known interface wraps await result", () => {
@@ -507,7 +507,7 @@ describe("sub-binding wrapping", () => {
       ]),
     ]);
     assert.ok(result.includes("async def connect(self) -> Session:"));
-    assert.ok(result.includes("return Session(await self._binding.connect())"));
+    assert.ok(result.includes("return Session.from_js(await self._binding.connect())"));
   });
 
   it("nullable known interface property uses conditional wrapping", () => {
@@ -519,7 +519,7 @@ describe("sub-binding wrapping", () => {
     ]);
     assert.ok(result.includes("def meta(self) -> Meta | None:"));
     assert.ok(result.includes("_v = self._binding.meta"));
-    assert.ok(result.includes("return Meta(_v) if _v is not None else None"));
+    assert.ok(result.includes("return Meta.from_js(_v) if _v is not None else None"));
   });
 
   it("nullable known interface method return uses conditional wrapping", () => {
@@ -536,7 +536,7 @@ describe("sub-binding wrapping", () => {
     ]);
     assert.ok(result.includes("def find(self, id: str) -> Item | None:"));
     assert.ok(result.includes("_v = self._binding.find(id)"));
-    assert.ok(result.includes("return Item(_v) if _v is not None else None"));
+    assert.ok(result.includes("return Item.from_js(_v) if _v is not None else None"));
   });
 
   it("renderInterface without renderFile does not wrap (backward compat)", () => {
@@ -546,7 +546,7 @@ describe("sub-binding wrapping", () => {
       ]),
     );
     assert.ok(result.includes("def videos(self) -> Any:"));
-    assert.ok(!result.includes("Videos("));
+    assert.ok(!result.includes("Videos.from_js("));
   });
 
   it("setter stays simple even for known interface properties", () => {

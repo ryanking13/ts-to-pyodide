@@ -1,5 +1,6 @@
 from __future__ import annotations
 from typing import Any, overload
+import js
 from pyodide.ffi import JsBuffer, JsProxy, create_proxy, to_js
 
 def _jsnull_to_none(value: Any) -> Any:
@@ -14,8 +15,11 @@ def _jsnull_to_none(value: Any) -> Any:
 class PipelineEntrypoint:
     _binding: Any
 
-    def __init__(self, binding: JsProxy) -> None:
-        self._binding = binding
+    @classmethod
+    def from_js(cls, js_obj: JsProxy) -> PipelineEntrypoint:
+        instance = object.__new__(cls)
+        instance._binding = js_obj
+        return instance
 
     @property
     def js_object(self) -> JsProxy:
@@ -31,8 +35,11 @@ class PipelineEntrypoint:
 class Pipeline:
     _binding: Any
 
-    def __init__(self, binding: JsProxy) -> None:
-        self._binding = binding
+    @classmethod
+    def from_js(cls, js_obj: JsProxy) -> Pipeline:
+        instance = object.__new__(cls)
+        instance._binding = js_obj
+        return instance
 
     @property
     def js_object(self) -> JsProxy:

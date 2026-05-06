@@ -85,6 +85,9 @@ export type InterfaceIR = {
   // as int | float, but sometimes we just want it to be written as int.
   // This is handled in an adhoc manner in adjustInterfaceIR.
   numberType?: string;
+  // Constructor signatures from `declare class` — the "new" static method.
+  // When present, the renderer generates __init__ calling js.ClassName.new(...).
+  constructors?: SigIR[];
 };
 
 export type DeclarationIR = {

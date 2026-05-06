@@ -108,6 +108,26 @@ describe("e2e: sub-binding wrapping (.d.ts → IR → renderFile)", () => {
   });
 });
 
+describe("e2e: constructor (.d.ts → IR → renderFile)", () => {
+  it("constructor: declare class with constructor produces __init__", () => {
+    const inputDts = readFileSync(
+      resolve(FIXTURES_DIR, "constructor", "input.d.ts"),
+      "utf-8",
+    );
+    const expectedPy = readFileSync(
+      resolve(FIXTURES_DIR, "constructor", "expected.py"),
+      "utf-8",
+    );
+
+    const project = makeProject();
+    project.createSourceFile("/fixture.d.ts", inputDts);
+    const result = convertToIR([project.getSourceFileOrThrow("/fixture.d.ts")]);
+
+    const output = renderer.renderFile(result.topLevels.ifaces);
+    assert.strictEqual(output, expectedPy);
+  });
+});
+
 describe("e2e: declare module extraction (.d.ts → IR → renderFile)", () => {
   it("declare_module: class from declare module + top-level interface", () => {
     const inputDts = readFileSync(
@@ -206,5 +226,94 @@ describe("e2e: declare module extraction", () => {
     const names = result.topLevels.ifaces.map((i) => i.name);
     assert.ok(!names.some((n) => n.includes("Hidden")), "unquoted namespace contents should not be extracted");
     assert.ok(names.some((n) => n.includes("Visible")), "top-level interface should be extracted");
+  });
+});
+
+describe("e2e: constructor support", () => {
+  it("declare class with constructor produces __init__ via renderFile", () => {
+    const project = makeProject();
+    project.createSourceFile("/fixture.d.ts", `
+      declare class HTMLRewriter {
+          constructor();
+          on(selector: string, handler: any): HTMLRewriter;
+      }
+    `);
+    const result = convertToIR([project.getSourceFileOrThrow("/fixture.d.ts")]);
+    const output = renderer.renderFile(result.topLevels.ifaces);
+
+    assert.ok(output.includes("class HTMLRewriter:"));
+    assert.ok(output.includes("def __init__(self, *args: Any, **kwargs: Any) -> None:"));
+    assert.ok(output.includes("self._binding = js.HTMLRewriter.new(*args, **kwargs)"));
+    assert.ok(output.includes("def from_js(cls, js_obj: JsProxy) -> HTMLRewriter:"));
+    assert.ok(output.includes("def on(self"));
+  });
+
+  it("declare class without constructor has no __init__", () => {
+    const project = makeProject();
+    project.createSourceFile("/fixture.d.ts", `
+      declare class MyService {
+          fetch(url: string): Promise<any>;
+      }
+    `);
+    const result = convertToIR([project.getSourceFileOrThrow("/fixture.d.ts")]);
+    const output = renderer.renderFile(result.topLevels.ifaces);
+
+    assert.ok(output.includes("class MyService:"));
+    assert.ok(!output.includes("def __init__"));
+    assert.ok(output.includes("def from_js(cls, js_obj: JsProxy) -> MyService:"));
+  });
+
+  it("declare class with parameterized constructor", () => {
+    const project = makeProject();
+    project.createSourceFile("/fixture.d.ts", `
+      declare class Request {
+          constructor(input: string, init?: any);
+          readonly url: string;
+      }
+    `);
+    const result = convertToIR([project.getSourceFileOrThrow("/fixture.d.ts")]);
+    const output = renderer.renderFile(result.topLevels.ifaces);
+
+    assert.ok(output.includes("class Request:"));
+    assert.ok(output.includes("def __init__(self, *args: Any, **kwargs: Any) -> None:"));
+    assert.ok(output.includes("self._binding = js.Request.new(*args, **kwargs)"));
+    assert.ok(output.includes("def url(self) -> str:"));
+  });
+
+  it("interface (not declare class) has no __init__", () => {
+    const project = makeProject();
+    project.createSourceFile("/fixture.d.ts", `
+      interface KVNamespace {
+          get(key: string): Promise<string | null>;
+      }
+      declare var kv: KVNamespace[];
+    `);
+    const result = convertToIR([project.getSourceFileOrThrow("/fixture.d.ts")]);
+    const output = renderer.renderFile(result.topLevels.ifaces);
+
+    assert.ok(output.includes("class KVNamespace:"));
+    assert.ok(!output.includes("def __init__"));
+    assert.ok(output.includes("def from_js(cls, js_obj: JsProxy) -> KVNamespace:"));
+  });
+
+  // TODO: non-global constructors from declare module blocks will fail at runtime
+  // because js.ClassName only works for globalThis-scoped types.
+  it("declare class in declare module gets constructor with TODO caveat", () => {
+    const project = makeProject();
+    project.createSourceFile("/fixture.d.ts", `
+      declare module "my:module" {
+          class MyWorker {
+              constructor(env: any);
+              fetch(url: string): Promise<any>;
+          }
+      }
+    `);
+    const result = convertToIR([project.getSourceFileOrThrow("/fixture.d.ts")]);
+    const output = renderer.renderFile(result.topLevels.ifaces);
+
+    assert.ok(output.includes("class MyWorker:"));
+    assert.ok(output.includes("def __init__(self, *args: Any, **kwargs: Any) -> None:"));
+    assert.ok(output.includes("js.MyWorker.new(*args, **kwargs)"));
+    assert.ok(output.includes("def from_js(cls, js_obj: JsProxy) -> MyWorker:"));
   });
 });

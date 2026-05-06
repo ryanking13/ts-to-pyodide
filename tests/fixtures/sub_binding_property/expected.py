@@ -1,8 +1,11 @@
 class Binding:
     _binding: Any
 
-    def __init__(self, binding: JsProxy) -> None:
-        self._binding = binding
+    @classmethod
+    def from_js(cls, js_obj: JsProxy) -> Binding:
+        instance = object.__new__(cls)
+        instance._binding = js_obj
+        return instance
 
     @property
     def js_object(self) -> JsProxy:
