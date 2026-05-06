@@ -518,7 +518,7 @@ describe("sub-binding wrapping", () => {
       ]),
     ]);
     assert.ok(result.includes("def meta(self) -> Meta | None:"));
-    assert.ok(result.includes("_v = self._binding.meta"));
+    assert.ok(result.includes("_v = _jsnull_to_none(self._binding.meta)"));
     assert.ok(result.includes("return Meta.from_js(_v) if _v is not None else None"));
   });
 
@@ -535,7 +535,7 @@ describe("sub-binding wrapping", () => {
       ]),
     ]);
     assert.ok(result.includes("def find(self, id: str) -> Item | None:"));
-    assert.ok(result.includes("_v = self._binding.find(id)"));
+    assert.ok(result.includes("_v = _jsnull_to_none(self._binding.find(id))"));
     assert.ok(result.includes("return Item.from_js(_v) if _v is not None else None"));
   });
 
