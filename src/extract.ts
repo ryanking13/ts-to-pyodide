@@ -74,10 +74,8 @@ function fixupClassBases(nameToCls: Map<string, InterfaceIR>): void {
 function adjustIR(topLevels: TopLevels): void {
   const classes = topLevels.ifaces;
   // Deduplicate interfaces with the same name, keeping the richer one.
-  // For declare class pairs (Foo + Foo_iface), extract constructor signatures
-  // from the concrete entry's "new" method before discarding it.
-
-  // TODO: Handle duplicated interfaces in different modules
+  // TODO: Duplicates arise from declare module extraction and interface merging.
+  //       Handle it properly instead of choosing the richer one.
   const nameToCls = new Map<string, InterfaceIR>();
   for (const cls of classes) {
     const existing = nameToCls.get(cls.name);

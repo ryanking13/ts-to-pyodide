@@ -72,31 +72,13 @@ export class Renderer {
         byClassName.set(className, ir);
         continue;
       }
-      // Extract constructor signatures from the "new" static method before merging.
-      // declare class produces two IR entries: ClassName (with "new") and ClassName_iface
-      // (with instance members). We keep the richer one but preserve constructors.
-      const constructorSigs = this.extractConstructorSigs(ir) ??
-        this.extractConstructorSigs(existing);
-
       const existingSize = existing.methods.length + existing.properties.length;
       const newSize = ir.methods.length + ir.properties.length;
       if (newSize > existingSize) {
         byClassName.set(className, ir);
       }
-
-      if (constructorSigs) {
-        byClassName.get(className)!.constructors = constructorSigs;
-      }
     }
     return [...byClassName.values()];
-  }
-
-  private extractConstructorSigs(ir: InterfaceIR): SigIR[] | undefined {
-    const newMethod = ir.methods.find(
-      (m) => m.name === "new" && m.isStatic,
-    );
-    if (!newMethod || newMethod.signatures.length === 0) return undefined;
-    return newMethod.signatures;
   }
 
   renderInterface(ir: InterfaceIR): string {

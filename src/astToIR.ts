@@ -832,7 +832,7 @@ export class Converter {
         const classDecl = decl
           .getParent()
           .asKindOrThrow(SyntaxKind.ClassDeclaration);
-        const name = classDecl.getName() + "_iface";
+        const name = classDecl.getName()!;
         const typeArgs: ParameterReferenceTypeIR[] = classDecl
           .getTypeParameters()
           .map((x) => parameterReferenceType(x.getName()));
@@ -1179,11 +1179,9 @@ export class Converter {
     }
   }
 
-  classToIR(classDecl: ClassDeclaration): [InterfaceIR, InterfaceIR] {
+  classToIR(classDecl: ClassDeclaration): InterfaceIR {
     const name = classDecl.getName() || "";
-    const ifaceName = name + "_iface";
 
-    // Extract properties and methods from class members
     const allProperties = classDecl.getProperties();
     const allMethods = classDecl.getMethods();
     const typeParams = this.getTypeParamsFromDecl(classDecl);
@@ -1192,29 +1190,29 @@ export class Converter {
     const [staticProperties, properties] = split2(allProperties, (x) =>
       x.isStatic(),
     );
-    const typeArgs = typeParams.map((x) => parameterReferenceType(x.name));
-    const concreteBases = [referenceType(ifaceName, typeArgs)];
     const constructors = classDecl.getConstructors();
     this.nameContext = [name];
-    const ifaceIR = this.interfaceToIR(
-      ifaceName,
+    const ir = this.interfaceToIR(
+      name,
       bases,
       [...methods, ...properties],
-      [],
-      [],
-      typeParams,
-    );
-    const concreteIR = this.interfaceToIR(
-      name,
-      concreteBases,
-      [],
       [...constructors, ...staticMethods, ...staticProperties],
       [],
       typeParams,
     );
-    concreteIR.jsobject = true;
+    ir.jsobject = true;
     this.nameContext = undefined;
-    return [ifaceIR, concreteIR];
+
+    if (constructors.length > 0) {
+      const newMethod = ir.methods.find(
+        (m) => m.name === "new" && m.isStatic,
+      );
+      if (newMethod) {
+        ir.constructors = newMethod.signatures;
+      }
+    }
+
+    return ir;
   }
 
   getBasesOfDecls(
@@ -1235,7 +1233,10 @@ export class Converter {
       if (name === "Record") {
         return referenceType(name, typeArgs);
       }
-      name += "_iface";
+      const classified = classifyIdentifier(ident as Identifier);
+      if (classified.kind !== "class") {
+        name += "_iface";
+      }
       this.addNeededInterface(ident as Identifier);
       return referenceType(name, typeArgs);
     });
@@ -1541,12 +1542,11 @@ export function convertDecls(
   }
   for (const classDecl of classDecls) {
     const name = sanitizeReservedWords(classDecl.getName() || "");
-    if (converter.convertedSet.has(name + "_iface")) {
+    if (converter.convertedSet.has(name)) {
       continue;
     }
-    converter.convertedSet.add(name + "_iface");
     converter.convertedSet.add(name);
-    converter.classToIR(classDecl).forEach(pushTopLevel);
+    pushTopLevel(converter.classToIR(classDecl));
   }
   let next: Needed | undefined;
   while ((next = popElt(converter.neededSet))) {
@@ -1556,21 +1556,21 @@ export function convertDecls(
     }
     if (next.type === "interface") {
       const ident = next.ident;
-      const name = ident.getText() + "_iface";
-      if (converter.convertedSet.has(name)) {
+      const ifaceName = ident.getText() + "_iface";
+      if (converter.convertedSet.has(ifaceName)) {
         continue;
       }
-      converter.convertedSet.add(name);
+      converter.convertedSet.add(ifaceName);
 
       const defs = ident
         .getDefinitionNodes()
         .filter(Node.isInterfaceDeclaration);
       if (defs.length) {
-        pushTopLevel(converter.topLevelInterfaceToIR(name, defs));
+        pushTopLevel(converter.topLevelInterfaceToIR(ifaceName, defs));
         continue;
       }
       // console.warn(ident.getDefinitionNodes().map(n => n.getText()).join("\n\n"))
-      logger.warn("No interface declaration for " + name);
+      logger.warn("No interface declaration for " + ifaceName);
     }
   }
   for (const tl of converter.extraTopLevels) {

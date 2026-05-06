@@ -651,3 +651,57 @@ describe("kwparams", () => {
     assert.ok(!result.includes("_opts"));
   });
 });
+
+describe("constructor support", () => {
+  function irInterfaceWithConstructors(
+    name: string,
+    constructors: SigIR[],
+    methods: Parameters<typeof irInterface>[1] = [],
+    properties: Parameters<typeof irInterface>[2] = [],
+  ): InterfaceIR {
+    const ir = irInterface(name, methods, properties);
+    ir.constructors = constructors;
+    return ir;
+  }
+
+  it("interface without constructor has no __init__", () => {
+    const result = renderer.renderInterface(irInterface("KV_iface"));
+    assert.ok(!result.includes("def __init__"));
+    assert.ok(result.includes("def from_js(cls, js_obj: JsProxy) -> KV:"));
+  });
+
+  it("interface with constructor has __init__ calling js.ClassName.new", () => {
+    const result = renderer.renderInterface(
+      irInterfaceWithConstructors("HTMLRewriter_iface", [
+        irSig([], { kind: "reference", name: "HTMLRewriter_iface", typeArgs: [] }),
+      ]),
+    );
+    assert.ok(result.includes("def __init__(self, *args: Any, **kwargs: Any) -> None:"));
+    assert.ok(result.includes("self._binding = js.HTMLRewriter.new(*args, **kwargs)"));
+  });
+
+  it("constructor type still has from_js classmethod", () => {
+    const result = renderer.renderInterface(
+      irInterfaceWithConstructors("HTMLRewriter_iface", [
+        irSig([], { kind: "reference", name: "HTMLRewriter_iface", typeArgs: [] }),
+      ]),
+    );
+    assert.ok(result.includes("def from_js(cls, js_obj: JsProxy) -> HTMLRewriter:"));
+  });
+
+  it("'new' static method is not rendered as a regular method", () => {
+    const result = renderer.renderInterface(
+      irInterfaceWithConstructors("Foo_iface", [
+        irSig([], { kind: "reference", name: "Foo_iface", typeArgs: [] }),
+      ], [
+        irMethod("new", [irSig(
+          [],
+          { kind: "reference", name: "Foo_iface", typeArgs: [] },
+        )], true),
+        irMethod("run", [irSig([], { kind: "simple", text: "Any" })]),
+      ]),
+    );
+    assert.ok(!result.includes("def new(self"));
+    assert.ok(result.includes("def run(self"));
+  });
+});
