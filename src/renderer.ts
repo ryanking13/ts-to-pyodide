@@ -21,6 +21,7 @@ import {
   isPromise,
   isVoidReturn,
   NATIVE_TYPES,
+  REFERENCE_TYPE_MAP,
   needsCreateProxy,
   needsToJs,
   needsToPy,
@@ -95,7 +96,9 @@ export class Renderer {
   // CONSTRUCTOR_MAP dict for runtime dispatch (e.g. KVNamespace → KvNamespace).
   // Needed for downstream auto-wrapping of env bindings by constructor.name.
   renderFile(interfaces: InterfaceIR[]): string {
-    const deduped = this.deduplicateInterfaces(interfaces);
+    const deduped = this.deduplicateInterfaces(interfaces).filter(
+      (ir) => !(ir.name in REFERENCE_TYPE_MAP || stripIfaceSuffix(ir.name) in REFERENCE_TYPE_MAP),
+    );
     this.knownInterfaces = buildKnownInterfacesMap(
       deduped.map((ir) => ir.name),
     );
@@ -283,12 +286,7 @@ export class Renderer {
       return this.renderSingleSig(jsName, pyName, effectiveSigs[0]);
     }
 
-    const parts: string[] = [];
-    for (const sig of effectiveSigs) {
-      parts.push(this.renderOverloadStub(pyName, sig));
-    }
-    parts.push(this.renderOverloadImpl(jsName, pyName, effectiveSigs));
-    return parts.join("\n");
+    return this.renderOverloadImpl(jsName, pyName, effectiveSigs);
   }
 
   private renderSingleSig(

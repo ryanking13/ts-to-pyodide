@@ -150,7 +150,7 @@ class R2Bucket:
         _v = _jsnull_to_none(await self._binding.get(key, _to_js_opts(options)))
         return R2ObjectBody.from_js(_v) if _v is not None else None
 
-    async def put(self, key: str, value: Any | JsBuffer | str | Any | None, options: R2PutOptions | None = None) -> R2Object:
+    async def put(self, key: str, value: Any | JsBuffer | str | None, options: R2PutOptions | None = None) -> R2Object:
         return R2Object.from_js(await self._binding.put(key, to_js(value), _to_js_opts(options)))
 
     async def create_multipart_upload(self, key: str, options: R2MultipartOptions | None = None) -> R2MultipartUpload:
@@ -322,7 +322,7 @@ class R2MultipartUpload:
     def upload_id(self) -> str:
         return self._binding.uploadId
 
-    async def upload_part(self, part_number: int | float, value: Any | JsBuffer | str | Any) -> R2UploadedPart:
+    async def upload_part(self, part_number: int | float, value: Any | JsBuffer | str) -> R2UploadedPart:
         return _from_js_opts(await self._binding.uploadPart(part_number, to_js(value)))
 
     async def abort(self) -> None:

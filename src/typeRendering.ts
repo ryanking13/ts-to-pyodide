@@ -17,7 +17,7 @@ export const NATIVE_TYPES: Record<string, NativeTypeInfo> = {
   },
 };
 
-const REFERENCE_TYPE_MAP: Record<string, string> = {
+export const REFERENCE_TYPE_MAP: Record<string, string> = {
   ArrayBuffer: "JsBuffer",
   ArrayBufferLike: "JsBuffer",
   ArrayBufferView_iface: "JsBuffer",
@@ -43,8 +43,10 @@ export function renderType(
       return ir.text;
     case "number":
       return "int | float";
-    case "union":
-      return ir.types.map((t) => renderType(t, knownInterfaces)).join(" | ");
+    case "union": {
+      const parts = ir.types.map((t) => renderType(t, knownInterfaces));
+      return [...new Set(parts)].join(" | ");
+    }
     case "reference": {
       if (ir.name.startsWith("Promise")) {
         const args = ir.typeArgs;
