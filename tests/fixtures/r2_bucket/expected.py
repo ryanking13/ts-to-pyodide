@@ -100,16 +100,16 @@ class R2Bucket:
         _v = await self._binding.head(key)
         return R2Object.from_js(_v) if _v is not None else None
 
-    async def get(self, key: str, *, only_if: R2Conditional | Any | None | None = None, range: Any | None = None, ssec_key: JsBuffer | str | None | None = None) -> R2ObjectBody | None:
+    async def get(self, key: str, *, only_if: R2Conditional | Any | None = None, range: Any | None = None, ssec_key: JsBuffer | str | None = None) -> R2ObjectBody | None:
         _opts = _build_opts(onlyIf=only_if, range=range, ssecKey=ssec_key)
         _v = await self._binding.get(key, to_js(_opts) if _opts else None)
         return R2ObjectBody.from_js(_v) if _v is not None else None
 
-    async def put(self, key: str, value: Any | JsBuffer | str | Any | None, *, only_if: R2Conditional | Any | None | None = None, http_metadata: R2HTTPMetadata | Any | None | None = None, custom_metadata: dict[str, str] | None = None, md5: JsBuffer | str | None | None = None, sha256: JsBuffer | str | None | None = None, storage_class: str | None = None, ssec_key: JsBuffer | str | None | None = None) -> R2Object:
+    async def put(self, key: str, value: Any | JsBuffer | str | Any | None, *, only_if: R2Conditional | Any | None = None, http_metadata: R2HTTPMetadata | Any | None = None, custom_metadata: dict[str, str] | None = None, md5: JsBuffer | str | None = None, sha256: JsBuffer | str | None = None, storage_class: str | None = None, ssec_key: JsBuffer | str | None = None) -> R2Object:
         _opts = _build_opts(onlyIf=only_if, httpMetadata=http_metadata, customMetadata=custom_metadata, md5=md5, sha256=sha256, storageClass=storage_class, ssecKey=ssec_key)
         return R2Object.from_js(await self._binding.put(key, to_js(value), to_js(_opts) if _opts else None))
 
-    async def create_multipart_upload(self, key: str, *, http_metadata: R2HTTPMetadata | Any | None | None = None, custom_metadata: dict[str, str] | None = None, storage_class: str | None = None) -> R2MultipartUpload:
+    async def create_multipart_upload(self, key: str, *, http_metadata: R2HTTPMetadata | Any | None = None, custom_metadata: dict[str, str] | None = None, storage_class: str | None = None) -> R2MultipartUpload:
         _opts = _build_opts(httpMetadata=http_metadata, customMetadata=custom_metadata, storageClass=storage_class)
         return R2MultipartUpload.from_js(await self._binding.createMultipartUpload(key, to_js(_opts) if _opts else None))
 
@@ -123,7 +123,7 @@ class R2Bucket:
         _opts = _build_opts(limit=limit, prefix=prefix, cursor=cursor, delimiter=delimiter, startAfter=start_after)
         return await self._binding.list(to_js(_opts) if _opts else None)
 
-    async def __getitem__(self, key: str, *, only_if: R2Conditional | Any | None | None = None, range: Any | None = None, ssec_key: JsBuffer | str | None | None = None) -> R2ObjectBody | None:
+    async def __getitem__(self, key: str, *, only_if: R2Conditional | Any | None = None, range: Any | None = None, ssec_key: JsBuffer | str | None = None) -> R2ObjectBody | None:
         _opts = _build_opts(onlyIf=only_if, range=range, ssecKey=ssec_key)
         _v = await self._binding.__getitem__(key, to_js(_opts) if _opts else None)
         return R2ObjectBody.from_js(_v) if _v is not None else None
@@ -238,11 +238,11 @@ class R2GetOptions:
         return getattr(self._binding, name)
 
     @property
-    def only_if(self) -> R2Conditional | Any | None | None:
+    def only_if(self) -> R2Conditional | Any | None:
         return _jsnull_to_none(self._binding.onlyIf)
     
     @only_if.setter
-    def only_if(self, value: R2Conditional | Any | None | None) -> None:
+    def only_if(self, value: R2Conditional | Any | None) -> None:
         self._binding.onlyIf = value
 
     @property
@@ -254,11 +254,11 @@ class R2GetOptions:
         self._binding.range = value
 
     @property
-    def ssec_key(self) -> JsBuffer | str | None | None:
+    def ssec_key(self) -> JsBuffer | str | None:
         return _jsnull_to_none(self._binding.ssecKey)
     
     @ssec_key.setter
-    def ssec_key(self, value: JsBuffer | str | None | None) -> None:
+    def ssec_key(self, value: JsBuffer | str | None) -> None:
         self._binding.ssecKey = value
 
 
@@ -373,19 +373,19 @@ class R2PutOptions:
         return getattr(self._binding, name)
 
     @property
-    def only_if(self) -> R2Conditional | Any | None | None:
+    def only_if(self) -> R2Conditional | Any | None:
         return _jsnull_to_none(self._binding.onlyIf)
     
     @only_if.setter
-    def only_if(self, value: R2Conditional | Any | None | None) -> None:
+    def only_if(self, value: R2Conditional | Any | None) -> None:
         self._binding.onlyIf = value
 
     @property
-    def http_metadata(self) -> R2HTTPMetadata | Any | None | None:
+    def http_metadata(self) -> R2HTTPMetadata | Any | None:
         return _jsnull_to_none(self._binding.httpMetadata)
     
     @http_metadata.setter
-    def http_metadata(self, value: R2HTTPMetadata | Any | None | None) -> None:
+    def http_metadata(self, value: R2HTTPMetadata | Any | None) -> None:
         self._binding.httpMetadata = value
 
     @property
@@ -398,19 +398,19 @@ class R2PutOptions:
         self._binding.customMetadata = value
 
     @property
-    def md5(self) -> JsBuffer | str | None | None:
+    def md5(self) -> JsBuffer | str | None:
         return _jsnull_to_none(self._binding.md5)
     
     @md5.setter
-    def md5(self, value: JsBuffer | str | None | None) -> None:
+    def md5(self, value: JsBuffer | str | None) -> None:
         self._binding.md5 = value
 
     @property
-    def sha256(self) -> JsBuffer | str | None | None:
+    def sha256(self) -> JsBuffer | str | None:
         return _jsnull_to_none(self._binding.sha256)
     
     @sha256.setter
-    def sha256(self, value: JsBuffer | str | None | None) -> None:
+    def sha256(self, value: JsBuffer | str | None) -> None:
         self._binding.sha256 = value
 
     @property
@@ -422,11 +422,11 @@ class R2PutOptions:
         self._binding.storageClass = value
 
     @property
-    def ssec_key(self) -> JsBuffer | str | None | None:
+    def ssec_key(self) -> JsBuffer | str | None:
         return _jsnull_to_none(self._binding.ssecKey)
     
     @ssec_key.setter
-    def ssec_key(self, value: JsBuffer | str | None | None) -> None:
+    def ssec_key(self, value: JsBuffer | str | None) -> None:
         self._binding.ssecKey = value
 
 
@@ -447,11 +447,11 @@ class R2MultipartOptions:
         return getattr(self._binding, name)
 
     @property
-    def http_metadata(self) -> R2HTTPMetadata | Any | None | None:
+    def http_metadata(self) -> R2HTTPMetadata | Any | None:
         return _jsnull_to_none(self._binding.httpMetadata)
     
     @http_metadata.setter
-    def http_metadata(self, value: R2HTTPMetadata | Any | None | None) -> None:
+    def http_metadata(self, value: R2HTTPMetadata | Any | None) -> None:
         self._binding.httpMetadata = value
 
     @property

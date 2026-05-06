@@ -237,7 +237,11 @@ export class Renderer {
     for (const kw of kwparams) {
       const kwName = toPythonName(kw.name);
       const kwType = renderType(kw.type, this.knownInterfaces);
-      paramStrs.push(`${kwName}: ${kwType} | None = None`);
+      if (isNullable(kw.type)) {
+        paramStrs.push(`${kwName}: ${kwType} = None`);
+      } else {
+        paramStrs.push(`${kwName}: ${kwType} | None = None`);
+      }
     }
 
     const paramList = paramStrs.join(", ");
@@ -310,7 +314,7 @@ export class Renderer {
     const nullable = isOptional || isNullable(typeIR);
 
     let typeStr = renderType(typeIR, this.knownInterfaces);
-    if (isOptional) {
+    if (isOptional && !isNullable(typeIR)) {
       typeStr += " | None";
     }
 
@@ -365,6 +369,9 @@ export class Renderer {
     const name = toPythonName(param.name);
     const typeStr = renderType(param.type, this.knownInterfaces);
     if (param.isOptional) {
+      if (isNullable(param.type)) {
+        return `${name}: ${typeStr} = None`;
+      }
       return `${name}: ${typeStr} | None = None`;
     }
     return `${name}: ${typeStr}`;
