@@ -4,6 +4,19 @@ import { stripIfaceSuffix } from "./naming";
 
 const PRIMITIVE_SIMPLE_TYPES = new Set(["str", "bool", "None", "Any", "Never"]);
 
+export type NativeTypeInfo = {
+  pyType: string;
+  toPy?: string;
+  toJs?: string;
+};
+
+export const NATIVE_TYPES: Record<string, NativeTypeInfo> = {
+  Headers: {
+    pyType: "dict[str, str] | list[tuple[str, str]] | JsProxy",
+    toJs: "_to_js_headers",
+  },
+};
+
 const REFERENCE_TYPE_MAP: Record<string, string> = {
   ArrayBuffer: "JsBuffer",
   ArrayBufferLike: "JsBuffer",
@@ -47,6 +60,8 @@ export function renderType(
       }
       const resolved = knownInterfaces?.get(ir.name);
       if (resolved) return resolved;
+      const native = NATIVE_TYPES[ir.name];
+      if (native) return native.pyType;
       const mapped = REFERENCE_TYPE_MAP[ir.name];
       if (mapped) return mapped;
       return "Any";

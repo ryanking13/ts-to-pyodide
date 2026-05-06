@@ -15,6 +15,13 @@ def _jsnull_to_none(value: Any) -> Any:
 def _build_opts(**kwargs: Any) -> dict[str, Any]:
     return {k: v for k, v in kwargs.items() if v is not None}
 
+def _to_js_headers(headers: dict[str, str] | list[tuple[str, str]] | JsProxy) -> JsProxy:
+    if isinstance(headers, dict):
+        return js.Headers.new(list(headers.items()))
+    elif isinstance(headers, list):
+        return js.Headers.new(headers)
+    return headers
+
 class R2Object:
     _binding: Any
 
@@ -73,8 +80,8 @@ class R2Object:
     def storage_class(self) -> str:
         return self._binding.storageClass
 
-    def write_http_metadata(self, headers: Any) -> None:
-        self._binding.writeHttpMetadata(to_js(headers))
+    def write_http_metadata(self, headers: dict[str, str] | list[tuple[str, str]] | JsProxy) -> None:
+        self._binding.writeHttpMetadata(_to_js_headers(headers))
 
     def __len__(self) -> int:
         return self._binding.__len__()
@@ -100,16 +107,16 @@ class R2Bucket:
         _v = await self._binding.head(key)
         return R2Object.from_js(_v) if _v is not None else None
 
-    async def get(self, key: str, *, only_if: R2Conditional | Any | None = None, range: Any | None = None, ssec_key: JsBuffer | str | None = None) -> R2ObjectBody | None:
-        _opts = _build_opts(onlyIf=only_if, range=range, ssecKey=ssec_key)
+    async def get(self, key: str, *, only_if: R2Conditional | dict[str, str] | list[tuple[str, str]] | JsProxy | None = None, range: dict[str, str] | list[tuple[str, str]] | JsProxy | None = None, ssec_key: JsBuffer | str | None = None) -> R2ObjectBody | None:
+        _opts = _build_opts(onlyIf=only_if, range=_to_js_headers(range) if range is not None else None, ssecKey=ssec_key)
         _v = await self._binding.get(key, to_js(_opts) if _opts else None)
         return R2ObjectBody.from_js(_v) if _v is not None else None
 
-    async def put(self, key: str, value: Any | JsBuffer | str | Any | None, *, only_if: R2Conditional | Any | None = None, http_metadata: R2HTTPMetadata | Any | None = None, custom_metadata: dict[str, str] | None = None, md5: JsBuffer | str | None = None, sha256: JsBuffer | str | None = None, storage_class: str | None = None, ssec_key: JsBuffer | str | None = None) -> R2Object:
+    async def put(self, key: str, value: Any | JsBuffer | str | Any | None, *, only_if: R2Conditional | dict[str, str] | list[tuple[str, str]] | JsProxy | None = None, http_metadata: R2HTTPMetadata | dict[str, str] | list[tuple[str, str]] | JsProxy | None = None, custom_metadata: dict[str, str] | None = None, md5: JsBuffer | str | None = None, sha256: JsBuffer | str | None = None, storage_class: str | None = None, ssec_key: JsBuffer | str | None = None) -> R2Object:
         _opts = _build_opts(onlyIf=only_if, httpMetadata=http_metadata, customMetadata=custom_metadata, md5=md5, sha256=sha256, storageClass=storage_class, ssecKey=ssec_key)
         return R2Object.from_js(await self._binding.put(key, to_js(value), to_js(_opts) if _opts else None))
 
-    async def create_multipart_upload(self, key: str, *, http_metadata: R2HTTPMetadata | Any | None = None, custom_metadata: dict[str, str] | None = None, storage_class: str | None = None) -> R2MultipartUpload:
+    async def create_multipart_upload(self, key: str, *, http_metadata: R2HTTPMetadata | dict[str, str] | list[tuple[str, str]] | JsProxy | None = None, custom_metadata: dict[str, str] | None = None, storage_class: str | None = None) -> R2MultipartUpload:
         _opts = _build_opts(httpMetadata=http_metadata, customMetadata=custom_metadata, storageClass=storage_class)
         return R2MultipartUpload.from_js(await self._binding.createMultipartUpload(key, to_js(_opts) if _opts else None))
 
@@ -123,8 +130,8 @@ class R2Bucket:
         _opts = _build_opts(limit=limit, prefix=prefix, cursor=cursor, delimiter=delimiter, startAfter=start_after)
         return await self._binding.list(to_js(_opts) if _opts else None)
 
-    async def __getitem__(self, key: str, *, only_if: R2Conditional | Any | None = None, range: Any | None = None, ssec_key: JsBuffer | str | None = None) -> R2ObjectBody | None:
-        _opts = _build_opts(onlyIf=only_if, range=range, ssecKey=ssec_key)
+    async def __getitem__(self, key: str, *, only_if: R2Conditional | dict[str, str] | list[tuple[str, str]] | JsProxy | None = None, range: dict[str, str] | list[tuple[str, str]] | JsProxy | None = None, ssec_key: JsBuffer | str | None = None) -> R2ObjectBody | None:
+        _opts = _build_opts(onlyIf=only_if, range=_to_js_headers(range) if range is not None else None, ssecKey=ssec_key)
         _v = await self._binding.__getitem__(key, to_js(_opts) if _opts else None)
         return R2ObjectBody.from_js(_v) if _v is not None else None
 
@@ -173,8 +180,8 @@ class R2HTTPMetadata(TypedDict, total=False):
 
 
 class R2GetOptions(TypedDict, total=False):
-    onlyIf: R2Conditional | Any | None
-    range: Any
+    onlyIf: R2Conditional | dict[str, str] | list[tuple[str, str]] | JsProxy | None
+    range: dict[str, str] | list[tuple[str, str]] | JsProxy
     ssecKey: JsBuffer | str | None
 
 
@@ -224,8 +231,8 @@ class R2Conditional(TypedDict, total=False):
 
 
 class R2PutOptions(TypedDict, total=False):
-    onlyIf: R2Conditional | Any | None
-    httpMetadata: R2HTTPMetadata | Any | None
+    onlyIf: R2Conditional | dict[str, str] | list[tuple[str, str]] | JsProxy | None
+    httpMetadata: R2HTTPMetadata | dict[str, str] | list[tuple[str, str]] | JsProxy | None
     customMetadata: dict[str, str]
     md5: JsBuffer | str | None
     sha256: JsBuffer | str | None
@@ -234,7 +241,7 @@ class R2PutOptions(TypedDict, total=False):
 
 
 class R2MultipartOptions(TypedDict, total=False):
-    httpMetadata: R2HTTPMetadata | Any | None
+    httpMetadata: R2HTTPMetadata | dict[str, str] | list[tuple[str, str]] | JsProxy | None
     customMetadata: dict[str, str]
     storageClass: str
 

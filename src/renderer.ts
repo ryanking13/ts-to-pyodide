@@ -20,6 +20,7 @@ import {
   isNullable,
   isPromise,
   isVoidReturn,
+  NATIVE_TYPES,
   needsCreateProxy,
   needsToJs,
   needsToPy,
@@ -45,6 +46,13 @@ def _jsnull_to_none(value: Any) -> Any:
 
 def _build_opts(**kwargs: Any) -> dict[str, Any]:
     return {k: v for k, v in kwargs.items() if v is not None}
+
+def _to_js_headers(headers: dict[str, str] | list[tuple[str, str]] | JsProxy) -> JsProxy:
+    if isinstance(headers, dict):
+        return js.Headers.new(list(headers.items()))
+    elif isinstance(headers, list):
+        return js.Headers.new(headers)
+    return headers
 `;
 
 /**
@@ -281,9 +289,14 @@ export class Renderer {
     const argParts = params.map((p) => this.wrapArg(p));
 
     const bodyLines: string[] = [];
-    const kwArgs = kwparams.map(
-      (kw) => `${kw.name}=${toPythonName(kw.name)}`,
-    ).join(", ");
+    const kwArgs = kwparams.map((kw) => {
+      const pyName = toPythonName(kw.name);
+      const nativeToJs = this.getNativeToJs(kw.type);
+      if (nativeToJs) {
+        return `${kw.name}=${nativeToJs}(${pyName}) if ${pyName} is not None else None`;
+      }
+      return `${kw.name}=${pyName}`;
+    }).join(", ");
     bodyLines.push(`    _opts = _build_opts(${kwArgs})`);
 
     argParts.push("to_js(_opts) if _opts else None");
@@ -451,6 +464,13 @@ export class Renderer {
     if (needsCreateProxy(param.type)) {
       return `create_proxy(${name})`;
     }
+    const nativeToJs = this.getNativeToJs(param.type);
+    if (nativeToJs) {
+      if (param.isOptional) {
+        return `${nativeToJs}(${name}) if ${name} is not None else None`;
+      }
+      return `${nativeToJs}(${name})`;
+    }
     if (needsToJs(param.type)) {
       if (param.isOptional) {
         return `to_js(${name}) if ${name} is not None else None`;
@@ -458,5 +478,12 @@ export class Renderer {
       return `to_js(${name})`;
     }
     return name;
+  }
+
+  private getNativeToJs(ir: TypeIR): string | undefined {
+    if (ir.kind === "reference") {
+      return NATIVE_TYPES[ir.name]?.toJs;
+    }
+    return undefined;
   }
 }

@@ -106,6 +106,18 @@ describe("renderType", () => {
     assert.strictEqual(renderType(ir), "dict[str, int | float]");
   });
 
+  it("Headers renders as native type", () => {
+    const ir: TypeIR = {
+      kind: "reference",
+      name: "Headers",
+      typeArgs: [],
+    };
+    assert.strictEqual(
+      renderType(ir),
+      "dict[str, str] | list[tuple[str, str]] | JsProxy",
+    );
+  });
+
   it("paren", () => {
     const ir: TypeIR = { kind: "paren", type: { kind: "simple", text: "str" } };
     assert.strictEqual(renderType(ir), "(str)");

@@ -15,6 +15,13 @@ def _jsnull_to_none(value: Any) -> Any:
 def _build_opts(**kwargs: Any) -> dict[str, Any]:
     return {k: v for k, v in kwargs.items() if v is not None}
 
+def _to_js_headers(headers: dict[str, str] | list[tuple[str, str]] | JsProxy) -> JsProxy:
+    if isinstance(headers, dict):
+        return js.Headers.new(list(headers.items()))
+    elif isinstance(headers, list):
+        return js.Headers.new(headers)
+    return headers
+
 class PipelineEntrypoint:
     _binding: Any
 
