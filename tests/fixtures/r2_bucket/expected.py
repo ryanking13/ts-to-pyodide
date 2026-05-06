@@ -95,12 +95,12 @@ class R2Object:
 
     @property
     def http_metadata(self) -> R2HTTPMetadata | None:
-        _v = self._binding.httpMetadata
+        _v = _jsnull_to_none(self._binding.httpMetadata)
         return _from_js_opts(_v) if _v is not None else None
 
     @property
     def custom_metadata(self) -> dict[str, str] | None:
-        _v = self._binding.customMetadata
+        _v = _jsnull_to_none(self._binding.customMetadata)
         return _v.to_py() if _v is not None else None
 
     @property
@@ -131,11 +131,11 @@ class R2Bucket:
         return getattr(self._binding, name)
 
     async def head(self, key: str) -> R2Object | None:
-        _v = await self._binding.head(key)
+        _v = _jsnull_to_none(await self._binding.head(key))
         return R2Object.from_js(_v) if _v is not None else None
 
     async def get(self, key: str, options: R2GetOptions | None = None) -> R2ObjectBody | None:
-        _v = await self._binding.get(key, _to_js_opts(options))
+        _v = _jsnull_to_none(await self._binding.get(key, _to_js_opts(options)))
         return R2ObjectBody.from_js(_v) if _v is not None else None
 
     async def put(self, key: str, value: Any | JsBuffer | str | Any | None, options: R2PutOptions | None = None) -> R2Object:
@@ -154,7 +154,7 @@ class R2Bucket:
         return await self._binding.list(_to_js_opts(options))
 
     async def __getitem__(self, key: str, options: R2GetOptions | None = None) -> R2ObjectBody | None:
-        _v = await self._binding.__getitem__(key, _to_js_opts(options))
+        _v = _jsnull_to_none(await self._binding.__getitem__(key, _to_js_opts(options)))
         return R2ObjectBody.from_js(_v) if _v is not None else None
 
     async def __delitem__(self, keys: str | list[str]) -> None:
@@ -299,7 +299,7 @@ class R2MultipartUpload:
         await self._binding.abort()
 
     async def complete(self, uploaded_parts: list[R2UploadedPart]) -> R2Object:
-        return R2Object.from_js(await self._binding.complete(to_js(uploaded_parts)))
+        return R2Object.from_js(await self._binding.complete(_to_js_opts(uploaded_parts)))
 
 
 class R2ListOptions(TypedDict, total=False):

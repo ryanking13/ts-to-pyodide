@@ -343,19 +343,19 @@ export class Renderer {
     let getterBody: string;
     if (wrapperClass && !isDataBag && nullable) {
       getterBody =
-        `    _v = ${rawExpr}\n` +
+        `    _v = _jsnull_to_none(${rawExpr})\n` +
         `    return ${wrapperClass}.from_js(_v) if _v is not None else None`;
     } else if (wrapperClass && !isDataBag) {
       getterBody = `    return ${wrapperClass}.from_js(${rawExpr})`;
     } else if (isDataBag && nullable) {
       getterBody =
-        `    _v = ${rawExpr}\n` +
+        `    _v = _jsnull_to_none(${rawExpr})\n` +
         `    return _from_js_opts(_v) if _v is not None else None`;
     } else if (isDataBag) {
       getterBody = `    return _from_js_opts(${rawExpr})`;
     } else if (toPy && nullable) {
       getterBody =
-        `    _v = ${rawExpr}\n` +
+        `    _v = _jsnull_to_none(${rawExpr})\n` +
         `    return _v.to_py() if _v is not None else None`;
     } else if (toPy) {
       getterBody = `    return ${rawExpr}.to_py()`;
@@ -416,7 +416,7 @@ export class Renderer {
     }
     if (wrapperClass && !isDataBag && nullable) {
       return (
-        `    _v = ${rawCall}\n` +
+        `    _v = _jsnull_to_none(${rawCall})\n` +
         `    return ${wrapperClass}.from_js(_v) if _v is not None else None`
       );
     }
@@ -425,7 +425,7 @@ export class Renderer {
     }
     if (isDataBag && nullable) {
       return (
-        `    _v = ${rawCall}\n` +
+        `    _v = _jsnull_to_none(${rawCall})\n` +
         `    return _from_js_opts(_v) if _v is not None else None`
       );
     }
@@ -474,6 +474,9 @@ export class Renderer {
   private isDataBagType(ir: TypeIR): boolean {
     if (ir.kind === "reference") {
       return this.dataBagNames.has(ir.name);
+    }
+    if (ir.kind === "array") {
+      return this.isDataBagType(ir.type);
     }
     return false;
   }
