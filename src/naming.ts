@@ -31,6 +31,13 @@ export const PYTHON_RESERVED = new Set([
   ...PYTHON_SOFT_KEYWORDS,
 ]);
 
+// Pyodide's JsProxy adds these as Python generator protocol methods,
+// shadowing actual JS methods with the same name (e.g. SendEmail.send).
+// We use _call_js_method (js.Reflect.get) to bypass the interception.
+export const PYODIDE_SHADOWED = new Set([
+  "send", "throw", "close",
+]);
+
 export function camelToSnake(name: string): string {
   return name
     .replace(/([A-Z]+)([A-Z][a-z])/g, "$1_$2")  // e.g. URLList -> URL_List
@@ -72,6 +79,10 @@ export function jsMethodCall(
   jsName: string,
   args: string,
 ): string {
+  if (PYODIDE_SHADOWED.has(jsName)) {
+    const callArgs = args ? `${obj}, "${jsName}", ${args}` : `${obj}, "${jsName}"`;
+    return `_call_js_method(${callArgs})`;
+  }
   if (PYTHON_RESERVED.has(jsName)) {
     return `getattr(${obj}, "${jsName}")(${args})`;
   }

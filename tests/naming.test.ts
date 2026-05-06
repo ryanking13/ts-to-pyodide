@@ -121,8 +121,8 @@ describe("jsMethodCall", () => {
 
   it("no args", () => {
     assert.strictEqual(
-      jsMethodCall("self._binding", "close", ""),
-      "self._binding.close()",
+      jsMethodCall("self._binding", "run", ""),
+      "self._binding.run()",
     );
   });
 
@@ -137,6 +137,27 @@ describe("jsMethodCall", () => {
     assert.strictEqual(
       jsMethodCall("self._binding", "put", "key, value"),
       "self._binding.put(key, value)",
+    );
+  });
+
+  it("pyodide-shadowed send uses _call_js_method", () => {
+    assert.strictEqual(
+      jsMethodCall("self._binding", "send", "message"),
+      '_call_js_method(self._binding, "send", message)',
+    );
+  });
+
+  it("pyodide-shadowed throw uses _call_js_method", () => {
+    assert.strictEqual(
+      jsMethodCall("self._binding", "throw", "err"),
+      '_call_js_method(self._binding, "throw", err)',
+    );
+  });
+
+  it("pyodide-shadowed close with no args", () => {
+    assert.strictEqual(
+      jsMethodCall("self._binding", "close", ""),
+      '_call_js_method(self._binding, "close")',
     );
   });
 });

@@ -59,14 +59,11 @@ def _from_js_headers(js_headers: Any) -> Any:
         result[key] = val
     return result
 
-class Headers:
+class SendEmail:
     _binding: Any
 
-    def __init__(self, *args: Any, **kwargs: Any) -> None:
-        self._binding = js.Headers.new(*args, **kwargs)
-
     @classmethod
-    def from_js(cls, js_obj: JsProxy) -> Headers:
+    def from_js(cls, js_obj: JsProxy) -> SendEmail:
         instance = object.__new__(cls)
         instance._binding = js_obj
         return instance
@@ -84,26 +81,58 @@ class Headers:
     def __setitem__(self, key: str, value: Any) -> None:
         setattr(self, _to_snake(key), value)
 
-    def get(self, name: str) -> str | None:
-        return _jsnull_to_none(self._binding.get(name))
+    async def send(self, message: EmailMessage) -> EmailSendResult:
+        return _from_js_opts(await _call_js_method(self._binding, "send", _to_js_opts(message)))
 
-    def set(self, name: str, value: str) -> None:
-        self._binding.set(name, value)
 
-    def has(self, name: str) -> bool:
-        return self._binding.has(name)
+class ForwardableEmailMessage:
+    _binding: Any
 
-    def delete(self, name: str) -> None:
-        self._binding.delete(name)
+    @classmethod
+    def from_js(cls, js_obj: JsProxy) -> ForwardableEmailMessage:
+        instance = object.__new__(cls)
+        instance._binding = js_obj
+        return instance
 
-    def __contains__(self, name: str) -> bool:
-        return self._binding.__contains__(name)
+    @property
+    def js_object(self) -> JsProxy:
+        return self._binding
 
-    def __getitem__(self, name: str) -> str | None:
-        return _jsnull_to_none(self._binding.__getitem__(name))
+    def __getattr__(self, name: str) -> Any:
+        return getattr(self._binding, name)
 
-    def __setitem__(self, name: str, value: str) -> None:
-        self._binding.__setitem__(name, value)
+    def __getitem__(self, key: str) -> Any:
+        return getattr(self, _to_snake(key))
 
-    def __delitem__(self, name: str) -> None:
-        self._binding.__delitem__(name)
+    def __setitem__(self, key: str, value: Any) -> None:
+        setattr(self, _to_snake(key), value)
+
+    @property
+    def raw(self) -> Any:
+        return self._binding.raw
+
+    @property
+    def headers(self) -> http.client.HTTPMessage:
+        return _from_js_headers(self._binding.headers)
+
+    @property
+    def raw_size(self) -> int | float:
+        return self._binding.rawSize
+
+    def set_reject(self, reason: str) -> None:
+        self._binding.setReject(reason)
+
+    async def forward(self, rcpt_to: str, headers: dict[str, str] | list[tuple[str, str]] | JsProxy | None = None) -> EmailSendResult:
+        return _from_js_opts(await self._binding.forward(rcpt_to, _to_js_headers(headers) if headers is not None else None))
+
+    async def reply(self, message: EmailMessage) -> EmailSendResult:
+        return _from_js_opts(await self._binding.reply(_to_js_opts(message)))
+
+
+class EmailMessage(TypedDict):
+    from_: str
+    to: str
+
+
+class EmailSendResult(TypedDict):
+    message_id: str

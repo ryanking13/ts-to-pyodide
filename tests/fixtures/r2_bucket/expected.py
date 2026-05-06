@@ -3,6 +3,9 @@ from typing import Any, TypedDict, overload
 import js
 from pyodide.ffi import JsBuffer, JsProxy, create_proxy, to_js
 
+def _call_js_method(binding: Any, method: str, *args: Any) -> Any:
+    return js.Reflect.apply(js.Reflect.get(binding, method), binding, to_js(args))
+
 def _jsnull_to_none(value: Any) -> Any:
     try:
         from pyodide.ffi import jsnull
@@ -48,6 +51,13 @@ def _to_js_headers(headers: dict[str, str] | list[tuple[str, str]] | JsProxy) ->
     elif isinstance(headers, list):
         return js.Headers.new(headers)
     return headers
+
+def _from_js_headers(js_headers: Any) -> Any:
+    import http.client
+    result = http.client.HTTPMessage()
+    for key, val in js_headers:
+        result[key] = val
+    return result
 
 class R2Object:
     _binding: Any
