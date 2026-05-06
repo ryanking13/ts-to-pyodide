@@ -561,54 +561,8 @@ describe("sub-binding wrapping", () => {
   });
 });
 
-describe("kwparams", () => {
-  it("renders keyword-only params with * separator", () => {
-    const result = renderer.renderInterface(
-      irInterface("KV_iface", [
-        irMethod("put", [
-          irSigWithKwparams(
-            [irParam("key", { kind: "simple", text: "str" })],
-            [irParam("ttl", { kind: "number" }, true)],
-            promiseOf({ kind: "simple", text: "None" }),
-          ),
-        ]),
-      ]),
-    );
-    assert.ok(result.includes("async def put(self, key: str, *, ttl: int | float | None = None) -> None:"));
-  });
-
-  it("builds _opts with _build_opts helper using camelCase JS keys", () => {
-    const result = renderer.renderInterface(
-      irInterface("KV_iface", [
-        irMethod("put", [
-          irSigWithKwparams(
-            [irParam("key", { kind: "simple", text: "str" })],
-            [
-              irParam("expirationTtl", { kind: "number" }, true),
-              irParam("metadata", { kind: "simple", text: "Any" }, true),
-            ],
-          ),
-        ]),
-      ]),
-    );
-    assert.ok(result.includes("_build_opts(expirationTtl=expiration_ttl, metadata=metadata)"));
-  });
-
-  it("passes _opts as last arg with to_js", () => {
-    const result = renderer.renderInterface(
-      irInterface("KV_iface", [
-        irMethod("put", [
-          irSigWithKwparams(
-            [irParam("key", { kind: "simple", text: "str" })],
-            [irParam("ttl", { kind: "number" }, true)],
-          ),
-        ]),
-      ]),
-    );
-    assert.ok(result.includes("self._binding.put(key, to_js(_opts) if _opts else None)"));
-  });
-
-  it("prefers kwparams sig over options-bag sig", () => {
+describe("options parameter", () => {
+  it("keeps options bag as typed parameter instead of destructuring", () => {
     const result = renderer.renderInterface(
       irInterface("KV_iface", [
         irMethod("put", [
@@ -627,12 +581,11 @@ describe("kwparams", () => {
         ]),
       ]),
     );
-    assert.ok(result.includes("*, ttl:"));
-    assert.ok(!result.includes("options"));
-    assert.ok(!result.includes("@overload"));
+    assert.ok(result.includes("options: Any"));
+    assert.ok(!result.includes("*, ttl:"));
   });
 
-  it("no kwparams falls through to normal rendering", () => {
+  it("no kwparams renders normally", () => {
     const result = renderer.renderInterface(
       irInterface("KV_iface", [
         irMethod("get", [

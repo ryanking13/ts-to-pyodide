@@ -12,8 +12,23 @@ def _jsnull_to_none(value: Any) -> Any:
         return None
     return value
 
-def _build_opts(**kwargs: Any) -> dict[str, Any]:
-    return {k: v for k, v in kwargs.items() if v is not None}
+def _to_camel(s: str) -> str:
+    parts = s.split("_")
+    return parts[0] + "".join(p.capitalize() for p in parts[1:])
+
+def _to_snake(s: str) -> str:
+    import re
+    return re.sub(r"([a-z0-9])([A-Z])", r"\1_\2", s).lower()
+
+def _to_js_opts(opts: Any) -> Any:
+    if opts is None:
+        return None
+    return to_js({_to_camel(k): v for k, v in opts.items() if v is not None})
+
+def _from_js_opts(js_obj: Any) -> Any:
+    if js_obj is None:
+        return None
+    return {_to_snake(k): v for k, v in js_obj.to_py().items()}
 
 def _to_js_headers(headers: dict[str, str] | list[tuple[str, str]] | JsProxy) -> JsProxy:
     if isinstance(headers, dict):
@@ -69,7 +84,7 @@ class R2Object:
     @property
     def http_metadata(self) -> R2HTTPMetadata | None:
         _v = self._binding.httpMetadata
-        return _v.to_py() if _v is not None else None
+        return _from_js_opts(_v) if _v is not None else None
 
     @property
     def custom_metadata(self) -> dict[str, str] | None:
@@ -107,18 +122,15 @@ class R2Bucket:
         _v = await self._binding.head(key)
         return R2Object.from_js(_v) if _v is not None else None
 
-    async def get(self, key: str, *, only_if: R2Conditional | dict[str, str] | list[tuple[str, str]] | JsProxy | None = None, range: dict[str, str] | list[tuple[str, str]] | JsProxy | None = None, ssec_key: JsBuffer | str | None = None) -> R2ObjectBody | None:
-        _opts = _build_opts(onlyIf=only_if, range=_to_js_headers(range) if range is not None else None, ssecKey=ssec_key)
-        _v = await self._binding.get(key, to_js(_opts) if _opts else None)
+    async def get(self, key: str, options: R2GetOptions | None = None) -> R2ObjectBody | None:
+        _v = await self._binding.get(key, _to_js_opts(options))
         return R2ObjectBody.from_js(_v) if _v is not None else None
 
-    async def put(self, key: str, value: Any | JsBuffer | str | Any | None, *, only_if: R2Conditional | dict[str, str] | list[tuple[str, str]] | JsProxy | None = None, http_metadata: R2HTTPMetadata | dict[str, str] | list[tuple[str, str]] | JsProxy | None = None, custom_metadata: dict[str, str] | None = None, md5: JsBuffer | str | None = None, sha256: JsBuffer | str | None = None, storage_class: str | None = None, ssec_key: JsBuffer | str | None = None) -> R2Object:
-        _opts = _build_opts(onlyIf=only_if, httpMetadata=http_metadata, customMetadata=custom_metadata, md5=md5, sha256=sha256, storageClass=storage_class, ssecKey=ssec_key)
-        return R2Object.from_js(await self._binding.put(key, to_js(value), to_js(_opts) if _opts else None))
+    async def put(self, key: str, value: Any | JsBuffer | str | Any | None, options: R2PutOptions | None = None) -> R2Object:
+        return R2Object.from_js(await self._binding.put(key, to_js(value), _to_js_opts(options)))
 
-    async def create_multipart_upload(self, key: str, *, http_metadata: R2HTTPMetadata | dict[str, str] | list[tuple[str, str]] | JsProxy | None = None, custom_metadata: dict[str, str] | None = None, storage_class: str | None = None) -> R2MultipartUpload:
-        _opts = _build_opts(httpMetadata=http_metadata, customMetadata=custom_metadata, storageClass=storage_class)
-        return R2MultipartUpload.from_js(await self._binding.createMultipartUpload(key, to_js(_opts) if _opts else None))
+    async def create_multipart_upload(self, key: str, options: R2MultipartOptions | None = None) -> R2MultipartUpload:
+        return R2MultipartUpload.from_js(await self._binding.createMultipartUpload(key, _to_js_opts(options)))
 
     def resume_multipart_upload(self, key: str, upload_id: str) -> R2MultipartUpload:
         return R2MultipartUpload.from_js(self._binding.resumeMultipartUpload(key, upload_id))
@@ -126,13 +138,11 @@ class R2Bucket:
     async def delete(self, keys: str | list[str]) -> None:
         await self._binding.delete(to_js(keys))
 
-    async def list(self, *, limit: int | float | None = None, prefix: str | None = None, cursor: str | None = None, delimiter: str | None = None, start_after: str | None = None) -> Any:
-        _opts = _build_opts(limit=limit, prefix=prefix, cursor=cursor, delimiter=delimiter, startAfter=start_after)
-        return await self._binding.list(to_js(_opts) if _opts else None)
+    async def list(self, options: R2ListOptions | None = None) -> Any:
+        return await self._binding.list(_to_js_opts(options))
 
-    async def __getitem__(self, key: str, *, only_if: R2Conditional | dict[str, str] | list[tuple[str, str]] | JsProxy | None = None, range: dict[str, str] | list[tuple[str, str]] | JsProxy | None = None, ssec_key: JsBuffer | str | None = None) -> R2ObjectBody | None:
-        _opts = _build_opts(onlyIf=only_if, range=_to_js_headers(range) if range is not None else None, ssecKey=ssec_key)
-        _v = await self._binding.__getitem__(key, to_js(_opts) if _opts else None)
+    async def __getitem__(self, key: str, options: R2GetOptions | None = None) -> R2ObjectBody | None:
+        _v = await self._binding.__getitem__(key, _to_js_opts(options))
         return R2ObjectBody.from_js(_v) if _v is not None else None
 
     async def __delitem__(self, keys: str | list[str]) -> None:
@@ -168,21 +178,21 @@ class R2Checksums:
         return _jsnull_to_none(self._binding.sha256)
 
     def to_json(self) -> R2StringChecksums:
-        return (self._binding.toJSON()).to_py()
+        return _from_js_opts(self._binding.toJSON())
 
 
 class R2HTTPMetadata(TypedDict, total=False):
-    contentType: str
-    contentLanguage: str
-    contentDisposition: str
-    contentEncoding: str
-    cacheControl: str
+    content_type: str
+    content_language: str
+    content_disposition: str
+    content_encoding: str
+    cache_control: str
 
 
 class R2GetOptions(TypedDict, total=False):
-    onlyIf: R2Conditional | dict[str, str] | list[tuple[str, str]] | JsProxy | None
+    only_if: R2Conditional | dict[str, str] | list[tuple[str, str]] | JsProxy | None
     range: dict[str, str] | list[tuple[str, str]] | JsProxy
-    ssecKey: JsBuffer | str | None
+    ssec_key: JsBuffer | str | None
 
 
 class R2ObjectBody:
@@ -223,27 +233,27 @@ class R2ObjectBody:
 
 
 class R2Conditional(TypedDict, total=False):
-    etagMatches: str
-    etagDoesNotMatch: str
-    uploadedBefore: Any
-    uploadedAfter: Any
-    secondsGranularity: bool
+    etag_matches: str
+    etag_does_not_match: str
+    uploaded_before: Any
+    uploaded_after: Any
+    seconds_granularity: bool
 
 
 class R2PutOptions(TypedDict, total=False):
-    onlyIf: R2Conditional | dict[str, str] | list[tuple[str, str]] | JsProxy | None
-    httpMetadata: R2HTTPMetadata | dict[str, str] | list[tuple[str, str]] | JsProxy | None
-    customMetadata: dict[str, str]
+    only_if: R2Conditional | dict[str, str] | list[tuple[str, str]] | JsProxy | None
+    http_metadata: R2HTTPMetadata | dict[str, str] | list[tuple[str, str]] | JsProxy | None
+    custom_metadata: dict[str, str]
     md5: JsBuffer | str | None
     sha256: JsBuffer | str | None
-    storageClass: str
-    ssecKey: JsBuffer | str | None
+    storage_class: str
+    ssec_key: JsBuffer | str | None
 
 
 class R2MultipartOptions(TypedDict, total=False):
-    httpMetadata: R2HTTPMetadata | dict[str, str] | list[tuple[str, str]] | JsProxy | None
-    customMetadata: dict[str, str]
-    storageClass: str
+    http_metadata: R2HTTPMetadata | dict[str, str] | list[tuple[str, str]] | JsProxy | None
+    custom_metadata: dict[str, str]
+    storage_class: str
 
 
 class R2MultipartUpload:
@@ -271,7 +281,7 @@ class R2MultipartUpload:
         return self._binding.uploadId
 
     async def upload_part(self, part_number: int | float, value: Any | JsBuffer | str | Any) -> R2UploadedPart:
-        return (await self._binding.uploadPart(part_number, to_js(value))).to_py()
+        return _from_js_opts(await self._binding.uploadPart(part_number, to_js(value)))
 
     async def abort(self) -> None:
         await self._binding.abort()
@@ -285,7 +295,7 @@ class R2ListOptions(TypedDict, total=False):
     prefix: str
     cursor: str
     delimiter: str
-    startAfter: str
+    start_after: str
 
 
 class R2StringChecksums(TypedDict, total=False):
@@ -295,5 +305,5 @@ class R2StringChecksums(TypedDict, total=False):
 
 
 class R2UploadedPart(TypedDict):
-    partNumber: int | float
+    part_number: int | float
     etag: str

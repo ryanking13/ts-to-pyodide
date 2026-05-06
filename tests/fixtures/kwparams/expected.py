@@ -1,3 +1,42 @@
+from __future__ import annotations
+from typing import Any, TypedDict, overload
+import js
+from pyodide.ffi import JsBuffer, JsProxy, create_proxy, to_js
+
+def _jsnull_to_none(value: Any) -> Any:
+    try:
+        from pyodide.ffi import jsnull
+    except ImportError:
+        return value
+    if value is jsnull:
+        return None
+    return value
+
+def _to_camel(s: str) -> str:
+    parts = s.split("_")
+    return parts[0] + "".join(p.capitalize() for p in parts[1:])
+
+def _to_snake(s: str) -> str:
+    import re
+    return re.sub(r"([a-z0-9])([A-Z])", r"\1_\2", s).lower()
+
+def _to_js_opts(opts: Any) -> Any:
+    if opts is None:
+        return None
+    return to_js({_to_camel(k): v for k, v in opts.items() if v is not None})
+
+def _from_js_opts(js_obj: Any) -> Any:
+    if js_obj is None:
+        return None
+    return {_to_snake(k): v for k, v in js_obj.to_py().items()}
+
+def _to_js_headers(headers: dict[str, str] | list[tuple[str, str]] | JsProxy) -> JsProxy:
+    if isinstance(headers, dict):
+        return js.Headers.new(list(headers.items()))
+    elif isinstance(headers, list):
+        return js.Headers.new(headers)
+    return headers
+
 class KVStore:
     _binding: Any
 
@@ -14,9 +53,17 @@ class KVStore:
     def __getattr__(self, name: str) -> Any:
         return getattr(self._binding, name)
 
-    async def put(self, key: str, value: str, *, expiration: int | float | None = None, expiration_ttl: int | float | None = None, metadata: Any | None = None) -> None:
-        _opts = _build_opts(expiration=expiration, expirationTtl=expiration_ttl, metadata=metadata)
-        await self._binding.put(key, value, to_js(_opts) if _opts else None)
+    async def put(self, key: str, value: str, options: KVPutOptions | None = None) -> None:
+        await self._binding.put(key, value, _to_js_opts(options))
 
     async def get(self, key: str) -> str | None:
         return _jsnull_to_none(await self._binding.get(key))
+
+    async def __getitem__(self, key: str) -> str | None:
+        return _jsnull_to_none(await self._binding.__getitem__(key))
+
+
+class KVPutOptions(TypedDict, total=False):
+    expiration: int | float
+    expiration_ttl: int | float
+    metadata: Any

@@ -44,8 +44,23 @@ def _jsnull_to_none(value: Any) -> Any:
         return None
     return value
 
-def _build_opts(**kwargs: Any) -> dict[str, Any]:
-    return {k: v for k, v in kwargs.items() if v is not None}
+def _to_camel(s: str) -> str:
+    parts = s.split("_")
+    return parts[0] + "".join(p.capitalize() for p in parts[1:])
+
+def _to_snake(s: str) -> str:
+    import re
+    return re.sub(r"([a-z0-9])([A-Z])", r"\\1_\\2", s).lower()
+
+def _to_js_opts(opts: Any) -> Any:
+    if opts is None:
+        return None
+    return to_js({_to_camel(k): v for k, v in opts.items() if v is not None})
+
+def _from_js_opts(js_obj: Any) -> Any:
+    if js_obj is None:
+        return None
+    return {_to_snake(k): v for k, v in js_obj.to_py().items()}
 
 def _to_js_headers(headers: dict[str, str] | list[tuple[str, str]] | JsProxy) -> JsProxy:
     if isinstance(headers, dict):
@@ -102,8 +117,9 @@ export class Renderer {
     const total = allOptional ? ", total=False" : "";
     const lines = [`class ${className}(TypedDict${total}):`];
     for (const prop of ir.properties) {
+      const pyName = camelToSnake(prop.name);
       const typeStr = renderType(prop.type, this.knownInterfaces);
-      lines.push(`    ${prop.name}: ${typeStr}`);
+      lines.push(`    ${pyName}: ${typeStr}`);
     }
     return lines.join("\n") + "\n";
   }
@@ -201,20 +217,20 @@ export class Renderer {
 
     const pyName = toPythonName(jsName);
 
-    const kwSig = sigs.find((s) => s.kwparams?.length);
-    if (kwSig) {
-      return this.renderKwparamsSig(jsName, pyName, kwSig);
-    }
+    // Filter out kwparams-destructured sigs — we keep the original options parameter
+    // and render it as a TypedDict instead of spreading into keyword args.
+    const nonKwSigs = sigs.filter((s) => !s.kwparams?.length);
+    const effectiveSigs = nonKwSigs.length > 0 ? nonKwSigs : sigs;
 
-    if (sigs.length === 1) {
-      return this.renderSingleSig(jsName, pyName, sigs[0]);
+    if (effectiveSigs.length === 1) {
+      return this.renderSingleSig(jsName, pyName, effectiveSigs[0]);
     }
 
     const parts: string[] = [];
-    for (const sig of sigs) {
+    for (const sig of effectiveSigs) {
       parts.push(this.renderOverloadStub(pyName, sig));
     }
-    parts.push(this.renderOverloadImpl(jsName, pyName, sigs));
+    parts.push(this.renderOverloadImpl(jsName, pyName, effectiveSigs));
     return parts.join("\n");
   }
 
@@ -259,62 +275,6 @@ export class Renderer {
     return `${prefix}def ${pyName}(${paramList}) -> ${returnType}:\n${body}`;
   }
 
-  private renderKwparamsSig(
-    jsName: string,
-    pyName: string,
-    sig: SigIR,
-  ): string {
-    const params = sig.params;
-    const kwparams = sig.kwparams!;
-    let returns = sig.returns;
-
-    const isAsync = isPromise(returns);
-    if (isAsync) {
-      returns = unwrapPromise(returns);
-    }
-
-    const paramStrs = ["self", ...params.map((p) => this.renderParam(p))];
-    paramStrs.push("*");
-    for (const kw of kwparams) {
-      const kwName = toPythonName(kw.name);
-      const kwType = renderType(kw.type, this.knownInterfaces);
-      if (isNullable(kw.type)) {
-        paramStrs.push(`${kwName}: ${kwType} = None`);
-      } else {
-        paramStrs.push(`${kwName}: ${kwType} | None = None`);
-      }
-    }
-
-    const paramList = paramStrs.join(", ");
-    const returnType = renderType(returns, this.knownInterfaces);
-
-    const argParts = params.map((p) => this.wrapArg(p));
-
-    const bodyLines: string[] = [];
-    const kwArgs = kwparams.map((kw) => {
-      const pyName = toPythonName(kw.name);
-      const nativeToJs = this.getNativeToJs(kw.type);
-      if (nativeToJs) {
-        return `${kw.name}=${nativeToJs}(${pyName}) if ${pyName} is not None else None`;
-      }
-      return `${kw.name}=${pyName}`;
-    }).join(", ");
-    bodyLines.push(`    _opts = _build_opts(${kwArgs})`);
-
-    argParts.push("to_js(_opts) if _opts else None");
-    const argList = argParts.join(", ");
-
-    let rawCall = jsMethodCall("self._binding", jsName, argList);
-    if (isAsync) {
-      rawCall = `await ${rawCall}`;
-    }
-
-    const returnBody = this.wrapReturn(rawCall, returns);
-    bodyLines.push(returnBody);
-
-    const prefix = isAsync ? "async " : "";
-    return `${prefix}def ${pyName}(${paramList}) -> ${returnType}:\n${bodyLines.join("\n")}`;
-  }
 
   private renderOverloadStub(pyName: string, sig: SigIR): string {
     let returns = sig.returns;
@@ -368,7 +328,7 @@ export class Renderer {
     const rawExpr = jsAttrAccess("self._binding", jsName);
 
     const isDataBag = wrapperClass ? this.dataBagNames.has(wrapperClass) : false;
-    const toPy = needsToPy(typeIR) || isDataBag;
+    const toPy = needsToPy(typeIR);
     let getterBody: string;
     if (wrapperClass && !isDataBag && nullable) {
       getterBody =
@@ -376,6 +336,12 @@ export class Renderer {
         `    return ${wrapperClass}.from_js(_v) if _v is not None else None`;
     } else if (wrapperClass && !isDataBag) {
       getterBody = `    return ${wrapperClass}.from_js(${rawExpr})`;
+    } else if (isDataBag && nullable) {
+      getterBody =
+        `    _v = ${rawExpr}\n` +
+        `    return _from_js_opts(_v) if _v is not None else None`;
+    } else if (isDataBag) {
+      getterBody = `    return _from_js_opts(${rawExpr})`;
     } else if (toPy && nullable) {
       getterBody =
         `    _v = ${rawExpr}\n` +
@@ -432,7 +398,7 @@ export class Renderer {
     const wrapperClass = resolveKnownInterface(returns, this.knownInterfaces);
     const isDataBag = wrapperClass ? this.dataBagNames.has(wrapperClass) : false;
     const nullable = isNullable(returns);
-    const toPy = needsToPy(returns) || isDataBag;
+    const toPy = needsToPy(returns);
 
     if (isVoidReturn(returns)) {
       return `    ${rawCall}`;
@@ -445,6 +411,15 @@ export class Renderer {
     }
     if (wrapperClass && !isDataBag) {
       return `    return ${wrapperClass}.from_js(${rawCall})`;
+    }
+    if (isDataBag && nullable) {
+      return (
+        `    _v = ${rawCall}\n` +
+        `    return _from_js_opts(_v) if _v is not None else None`
+      );
+    }
+    if (isDataBag) {
+      return `    return _from_js_opts(${rawCall})`;
     }
     if (toPy && nullable) {
       return (
@@ -473,6 +448,9 @@ export class Renderer {
       }
       return `${nativeToJs}(${name})`;
     }
+    if (this.isDataBagType(param.type)) {
+      return `_to_js_opts(${name})`;
+    }
     if (needsToJs(param.type)) {
       if (param.isOptional) {
         return `to_js(${name}) if ${name} is not None else None`;
@@ -480,6 +458,13 @@ export class Renderer {
       return `to_js(${name})`;
     }
     return name;
+  }
+
+  private isDataBagType(ir: TypeIR): boolean {
+    if (ir.kind === "reference") {
+      return this.dataBagNames.has(ir.name);
+    }
+    return false;
   }
 
   private getNativeToJs(ir: TypeIR): string | undefined {

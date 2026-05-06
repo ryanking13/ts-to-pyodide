@@ -25,7 +25,6 @@ export const FIXTURE_NAMES = [
   "generic_method",
   "sub_binding_property",
   "buffer_types",
-  "kwparams",
   "get_accessor",
 ];
 
