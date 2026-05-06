@@ -404,7 +404,7 @@ describe("callable param conversion", () => {
 describe("renderFile", () => {
   it("includes prelude with pyodide imports", () => {
     const result = renderer.renderFile([irInterface("X_iface")]);
-    assert.ok(result.includes("from typing import Any, overload"));
+    assert.ok(result.includes("from typing import Any, TypedDict, overload"));
     assert.ok(result.includes("from pyodide.ffi import JsBuffer, JsProxy, create_proxy, to_js"));
     assert.ok(result.includes("def _jsnull_to_none"));
   });
@@ -512,8 +512,8 @@ describe("sub-binding wrapping", () => {
 
   it("nullable known interface property uses conditional wrapping", () => {
     const result = renderer.renderFile([
-      irInterface("Meta_iface"),
-      irInterface("Obj_iface", [], [
+      irInterface("Meta_iface", [irMethod("info", [irSig()])]),
+      irInterface("Obj_iface", [irMethod("fetch", [irSig()])], [
         irProperty("meta", refType("Meta_iface"), true, true),
       ]),
     ]);

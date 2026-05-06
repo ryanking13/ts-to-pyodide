@@ -30,7 +30,7 @@ import {
 
 const PRELUDE = `\
 from __future__ import annotations
-from typing import Any, overload
+from typing import Any, TypedDict, overload
 import js
 from pyodide.ffi import JsBuffer, JsProxy, create_proxy, to_js
 
@@ -54,6 +54,7 @@ export class Renderer {
   // Map of interface names to their Python class names
   // This is used to resolve interface types that are returned from methods
   private knownInterfaces: Map<string, string> = new Map();
+  private dataBagNames: Set<string> = new Set();
 
   // TODO: accept optional constructor name map (JSON config) to emit a
   // CONSTRUCTOR_MAP dict for runtime dispatch (e.g. KVNamespace → KvNamespace).
@@ -63,8 +64,38 @@ export class Renderer {
     this.knownInterfaces = buildKnownInterfacesMap(
       deduped.map((ir) => ir.name),
     );
-    const bodies = deduped.map((ir) => this.renderInterface(ir));
+    this.dataBagNames = new Set();
+    for (const ir of deduped) {
+      if (this.isDataBag(ir)) {
+        this.dataBagNames.add(ir.name);
+        this.dataBagNames.add(stripIfaceSuffix(ir.name));
+      }
+    }
+    const bodies = deduped.map((ir) =>
+      this.dataBagNames.has(ir.name) ? this.renderTypedDict(ir) : this.renderInterface(ir),
+    );
     return PRELUDE + "\n" + bodies.join("\n\n");
+  }
+
+  // A TypeScript object that only has properties and no methods is considered a data bag
+  // In python, we pass it as a TypedDict not a class which is more pythonic
+  private isDataBag(ir: InterfaceIR): boolean {
+    const hasMethods = ir.methods.some(
+      (m) => m.name !== "__call__" && m.name && !m.isStatic,
+    );
+    return !hasMethods &&
+      ir.properties.length > 0 &&
+      ir.properties.every((p) => p.isOptional);
+  }
+
+  private renderTypedDict(ir: InterfaceIR): string {
+    const className = stripIfaceSuffix(ir.name);
+    const lines = [`class ${className}(TypedDict, total=False):`];
+    for (const prop of ir.properties) {
+      const typeStr = renderType(prop.type, this.knownInterfaces);
+      lines.push(`    ${prop.name}: ${typeStr}`);
+    }
+    return lines.join("\n") + "\n";
   }
 
   private deduplicateInterfaces(interfaces: InterfaceIR[]): InterfaceIR[] {
@@ -321,13 +352,14 @@ export class Renderer {
     const wrapperClass = resolveKnownInterface(typeIR, this.knownInterfaces);
     const rawExpr = jsAttrAccess("self._binding", jsName);
 
-    const toPy = needsToPy(typeIR);
+    const isDataBag = wrapperClass ? this.dataBagNames.has(wrapperClass) : false;
+    const toPy = needsToPy(typeIR) || isDataBag;
     let getterBody: string;
-    if (wrapperClass && nullable) {
+    if (wrapperClass && !isDataBag && nullable) {
       getterBody =
         `    _v = ${rawExpr}\n` +
         `    return ${wrapperClass}.from_js(_v) if _v is not None else None`;
-    } else if (wrapperClass) {
+    } else if (wrapperClass && !isDataBag) {
       getterBody = `    return ${wrapperClass}.from_js(${rawExpr})`;
     } else if (toPy && nullable) {
       getterBody =
@@ -383,19 +415,20 @@ export class Renderer {
   // function expects cloning or not...
   private wrapReturn(rawCall: string, returns: TypeIR): string {
     const wrapperClass = resolveKnownInterface(returns, this.knownInterfaces);
+    const isDataBag = wrapperClass ? this.dataBagNames.has(wrapperClass) : false;
     const nullable = isNullable(returns);
-    const toPy = needsToPy(returns);
+    const toPy = needsToPy(returns) || isDataBag;
 
     if (isVoidReturn(returns)) {
       return `    ${rawCall}`;
     }
-    if (wrapperClass && nullable) {
+    if (wrapperClass && !isDataBag && nullable) {
       return (
         `    _v = ${rawCall}\n` +
         `    return ${wrapperClass}.from_js(_v) if _v is not None else None`
       );
     }
-    if (wrapperClass) {
+    if (wrapperClass && !isDataBag) {
       return `    return ${wrapperClass}.from_js(${rawCall})`;
     }
     if (toPy && nullable) {

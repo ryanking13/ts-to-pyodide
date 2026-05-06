@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import Any, overload
+from typing import Any, TypedDict, overload
 import js
 from pyodide.ffi import JsBuffer, JsProxy, create_proxy, to_js
 
@@ -62,7 +62,7 @@ class R2Object:
     @property
     def http_metadata(self) -> R2HTTPMetadata | None:
         _v = self._binding.httpMetadata
-        return R2HTTPMetadata.from_js(_v) if _v is not None else None
+        return _v.to_py() if _v is not None else None
 
     @property
     def custom_metadata(self) -> dict[str, str] | None:
@@ -161,105 +161,21 @@ class R2Checksums:
         return _jsnull_to_none(self._binding.sha256)
 
     def to_json(self) -> R2StringChecksums:
-        return R2StringChecksums.from_js(self._binding.toJSON())
+        return (self._binding.toJSON()).to_py()
 
 
-class R2HTTPMetadata:
-    _binding: Any
-
-    @classmethod
-    def from_js(cls, js_obj: JsProxy) -> R2HTTPMetadata:
-        instance = object.__new__(cls)
-        instance._binding = js_obj
-        return instance
-
-    @property
-    def js_object(self) -> JsProxy:
-        return self._binding
-
-    def __getattr__(self, name: str) -> Any:
-        return getattr(self._binding, name)
-
-    @property
-    def content_type(self) -> str | None:
-        return _jsnull_to_none(self._binding.contentType)
-    
-    @content_type.setter
-    def content_type(self, value: str | None) -> None:
-        self._binding.contentType = value
-
-    @property
-    def content_language(self) -> str | None:
-        return _jsnull_to_none(self._binding.contentLanguage)
-    
-    @content_language.setter
-    def content_language(self, value: str | None) -> None:
-        self._binding.contentLanguage = value
-
-    @property
-    def content_disposition(self) -> str | None:
-        return _jsnull_to_none(self._binding.contentDisposition)
-    
-    @content_disposition.setter
-    def content_disposition(self, value: str | None) -> None:
-        self._binding.contentDisposition = value
-
-    @property
-    def content_encoding(self) -> str | None:
-        return _jsnull_to_none(self._binding.contentEncoding)
-    
-    @content_encoding.setter
-    def content_encoding(self, value: str | None) -> None:
-        self._binding.contentEncoding = value
-
-    @property
-    def cache_control(self) -> str | None:
-        return _jsnull_to_none(self._binding.cacheControl)
-    
-    @cache_control.setter
-    def cache_control(self, value: str | None) -> None:
-        self._binding.cacheControl = value
+class R2HTTPMetadata(TypedDict, total=False):
+    contentType: str
+    contentLanguage: str
+    contentDisposition: str
+    contentEncoding: str
+    cacheControl: str
 
 
-class R2GetOptions:
-    _binding: Any
-
-    @classmethod
-    def from_js(cls, js_obj: JsProxy) -> R2GetOptions:
-        instance = object.__new__(cls)
-        instance._binding = js_obj
-        return instance
-
-    @property
-    def js_object(self) -> JsProxy:
-        return self._binding
-
-    def __getattr__(self, name: str) -> Any:
-        return getattr(self._binding, name)
-
-    @property
-    def only_if(self) -> R2Conditional | Any | None:
-        return _jsnull_to_none(self._binding.onlyIf)
-    
-    @only_if.setter
-    def only_if(self, value: R2Conditional | Any | None) -> None:
-        self._binding.onlyIf = value
-
-    @property
-    def range(self) -> Any | None:
-        return _jsnull_to_none(self._binding.range)
-    
-    @range.setter
-    def range(self, value: Any | None) -> None:
-        self._binding.range = value
-
-    @property
-    def ssec_key(self) -> JsBuffer | str | None:
-        return _jsnull_to_none(self._binding.ssecKey)
-    
-    @ssec_key.setter
-    def ssec_key(self, value: JsBuffer | str | None) -> None:
-        self._binding.ssecKey = value
+class R2GetOptions(TypedDict, total=False):
+    onlyIf: R2Conditional | Any | None
+    range: Any
+    ssecKey: JsBuffer | str | None
 
 
 class R2ObjectBody:
@@ -299,177 +215,28 @@ class R2ObjectBody:
         return await self._binding.blob()
 
 
-class R2Conditional:
-    _binding: Any
-
-    @classmethod
-    def from_js(cls, js_obj: JsProxy) -> R2Conditional:
-        instance = object.__new__(cls)
-        instance._binding = js_obj
-        return instance
-
-    @property
-    def js_object(self) -> JsProxy:
-        return self._binding
-
-    def __getattr__(self, name: str) -> Any:
-        return getattr(self._binding, name)
-
-    @property
-    def etag_matches(self) -> str | None:
-        return _jsnull_to_none(self._binding.etagMatches)
-    
-    @etag_matches.setter
-    def etag_matches(self, value: str | None) -> None:
-        self._binding.etagMatches = value
-
-    @property
-    def etag_does_not_match(self) -> str | None:
-        return _jsnull_to_none(self._binding.etagDoesNotMatch)
-    
-    @etag_does_not_match.setter
-    def etag_does_not_match(self, value: str | None) -> None:
-        self._binding.etagDoesNotMatch = value
-
-    @property
-    def uploaded_before(self) -> Any | None:
-        return _jsnull_to_none(self._binding.uploadedBefore)
-    
-    @uploaded_before.setter
-    def uploaded_before(self, value: Any | None) -> None:
-        self._binding.uploadedBefore = value
-
-    @property
-    def uploaded_after(self) -> Any | None:
-        return _jsnull_to_none(self._binding.uploadedAfter)
-    
-    @uploaded_after.setter
-    def uploaded_after(self, value: Any | None) -> None:
-        self._binding.uploadedAfter = value
-
-    @property
-    def seconds_granularity(self) -> bool | None:
-        return _jsnull_to_none(self._binding.secondsGranularity)
-    
-    @seconds_granularity.setter
-    def seconds_granularity(self, value: bool | None) -> None:
-        self._binding.secondsGranularity = value
+class R2Conditional(TypedDict, total=False):
+    etagMatches: str
+    etagDoesNotMatch: str
+    uploadedBefore: Any
+    uploadedAfter: Any
+    secondsGranularity: bool
 
 
-class R2PutOptions:
-    _binding: Any
-
-    @classmethod
-    def from_js(cls, js_obj: JsProxy) -> R2PutOptions:
-        instance = object.__new__(cls)
-        instance._binding = js_obj
-        return instance
-
-    @property
-    def js_object(self) -> JsProxy:
-        return self._binding
-
-    def __getattr__(self, name: str) -> Any:
-        return getattr(self._binding, name)
-
-    @property
-    def only_if(self) -> R2Conditional | Any | None:
-        return _jsnull_to_none(self._binding.onlyIf)
-    
-    @only_if.setter
-    def only_if(self, value: R2Conditional | Any | None) -> None:
-        self._binding.onlyIf = value
-
-    @property
-    def http_metadata(self) -> R2HTTPMetadata | Any | None:
-        return _jsnull_to_none(self._binding.httpMetadata)
-    
-    @http_metadata.setter
-    def http_metadata(self, value: R2HTTPMetadata | Any | None) -> None:
-        self._binding.httpMetadata = value
-
-    @property
-    def custom_metadata(self) -> dict[str, str] | None:
-        _v = self._binding.customMetadata
-        return _v.to_py() if _v is not None else None
-    
-    @custom_metadata.setter
-    def custom_metadata(self, value: dict[str, str] | None) -> None:
-        self._binding.customMetadata = value
-
-    @property
-    def md5(self) -> JsBuffer | str | None:
-        return _jsnull_to_none(self._binding.md5)
-    
-    @md5.setter
-    def md5(self, value: JsBuffer | str | None) -> None:
-        self._binding.md5 = value
-
-    @property
-    def sha256(self) -> JsBuffer | str | None:
-        return _jsnull_to_none(self._binding.sha256)
-    
-    @sha256.setter
-    def sha256(self, value: JsBuffer | str | None) -> None:
-        self._binding.sha256 = value
-
-    @property
-    def storage_class(self) -> str | None:
-        return _jsnull_to_none(self._binding.storageClass)
-    
-    @storage_class.setter
-    def storage_class(self, value: str | None) -> None:
-        self._binding.storageClass = value
-
-    @property
-    def ssec_key(self) -> JsBuffer | str | None:
-        return _jsnull_to_none(self._binding.ssecKey)
-    
-    @ssec_key.setter
-    def ssec_key(self, value: JsBuffer | str | None) -> None:
-        self._binding.ssecKey = value
+class R2PutOptions(TypedDict, total=False):
+    onlyIf: R2Conditional | Any | None
+    httpMetadata: R2HTTPMetadata | Any | None
+    customMetadata: dict[str, str]
+    md5: JsBuffer | str | None
+    sha256: JsBuffer | str | None
+    storageClass: str
+    ssecKey: JsBuffer | str | None
 
 
-class R2MultipartOptions:
-    _binding: Any
-
-    @classmethod
-    def from_js(cls, js_obj: JsProxy) -> R2MultipartOptions:
-        instance = object.__new__(cls)
-        instance._binding = js_obj
-        return instance
-
-    @property
-    def js_object(self) -> JsProxy:
-        return self._binding
-
-    def __getattr__(self, name: str) -> Any:
-        return getattr(self._binding, name)
-
-    @property
-    def http_metadata(self) -> R2HTTPMetadata | Any | None:
-        return _jsnull_to_none(self._binding.httpMetadata)
-    
-    @http_metadata.setter
-    def http_metadata(self, value: R2HTTPMetadata | Any | None) -> None:
-        self._binding.httpMetadata = value
-
-    @property
-    def custom_metadata(self) -> dict[str, str] | None:
-        _v = self._binding.customMetadata
-        return _v.to_py() if _v is not None else None
-    
-    @custom_metadata.setter
-    def custom_metadata(self, value: dict[str, str] | None) -> None:
-        self._binding.customMetadata = value
-
-    @property
-    def storage_class(self) -> str | None:
-        return _jsnull_to_none(self._binding.storageClass)
-    
-    @storage_class.setter
-    def storage_class(self, value: str | None) -> None:
-        self._binding.storageClass = value
+class R2MultipartOptions(TypedDict, total=False):
+    httpMetadata: R2HTTPMetadata | Any | None
+    customMetadata: dict[str, str]
+    storageClass: str
 
 
 class R2MultipartUpload:
@@ -506,102 +273,18 @@ class R2MultipartUpload:
         return R2Object.from_js(await self._binding.complete(to_js(uploaded_parts)))
 
 
-class R2ListOptions:
-    _binding: Any
-
-    @classmethod
-    def from_js(cls, js_obj: JsProxy) -> R2ListOptions:
-        instance = object.__new__(cls)
-        instance._binding = js_obj
-        return instance
-
-    @property
-    def js_object(self) -> JsProxy:
-        return self._binding
-
-    def __getattr__(self, name: str) -> Any:
-        return getattr(self._binding, name)
-
-    @property
-    def limit(self) -> int | float | None:
-        return _jsnull_to_none(self._binding.limit)
-    
-    @limit.setter
-    def limit(self, value: int | float | None) -> None:
-        self._binding.limit = value
-
-    @property
-    def prefix(self) -> str | None:
-        return _jsnull_to_none(self._binding.prefix)
-    
-    @prefix.setter
-    def prefix(self, value: str | None) -> None:
-        self._binding.prefix = value
-
-    @property
-    def cursor(self) -> str | None:
-        return _jsnull_to_none(self._binding.cursor)
-    
-    @cursor.setter
-    def cursor(self, value: str | None) -> None:
-        self._binding.cursor = value
-
-    @property
-    def delimiter(self) -> str | None:
-        return _jsnull_to_none(self._binding.delimiter)
-    
-    @delimiter.setter
-    def delimiter(self, value: str | None) -> None:
-        self._binding.delimiter = value
-
-    @property
-    def start_after(self) -> str | None:
-        return _jsnull_to_none(self._binding.startAfter)
-    
-    @start_after.setter
-    def start_after(self, value: str | None) -> None:
-        self._binding.startAfter = value
+class R2ListOptions(TypedDict, total=False):
+    limit: int | float
+    prefix: str
+    cursor: str
+    delimiter: str
+    startAfter: str
 
 
-class R2StringChecksums:
-    _binding: Any
-
-    @classmethod
-    def from_js(cls, js_obj: JsProxy) -> R2StringChecksums:
-        instance = object.__new__(cls)
-        instance._binding = js_obj
-        return instance
-
-    @property
-    def js_object(self) -> JsProxy:
-        return self._binding
-
-    def __getattr__(self, name: str) -> Any:
-        return getattr(self._binding, name)
-
-    @property
-    def md5(self) -> str | None:
-        return _jsnull_to_none(self._binding.md5)
-    
-    @md5.setter
-    def md5(self, value: str | None) -> None:
-        self._binding.md5 = value
-
-    @property
-    def sha1(self) -> str | None:
-        return _jsnull_to_none(self._binding.sha1)
-    
-    @sha1.setter
-    def sha1(self, value: str | None) -> None:
-        self._binding.sha1 = value
-
-    @property
-    def sha256(self) -> str | None:
-        return _jsnull_to_none(self._binding.sha256)
-    
-    @sha256.setter
-    def sha256(self, value: str | None) -> None:
-        self._binding.sha256 = value
+class R2StringChecksums(TypedDict, total=False):
+    md5: str
+    sha1: str
+    sha256: str
 
 
 class R2UploadedPart:

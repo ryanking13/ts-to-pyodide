@@ -43,7 +43,7 @@ describe("CLI", () => {
       assert.match(stdout, /Generated \d+ classes/);
 
       const content = readFileSync(outFile, "utf-8");
-      assert.match(content, /from typing import Any, overload/);
+      assert.match(content, /from typing import Any, TypedDict, overload/);
       assert.match(content, /from pyodide\.ffi import JsBuffer, JsProxy/);
       assert.match(content, /def _jsnull_to_none/);
       assert.ok(content.includes("class KVNamespace:"), "expected class KVNamespace in output");
