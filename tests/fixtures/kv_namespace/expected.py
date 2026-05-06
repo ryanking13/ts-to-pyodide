@@ -71,22 +71,6 @@ class KVNamespace:
     def __setitem__(self, key: str, value: Any) -> None:
         setattr(self, _to_snake(key), value)
 
-    @property
-    def type_(self) -> Any | None:
-        return _jsnull_to_none(getattr(self._binding, "type"))
-    
-    @type_.setter
-    def type_(self, value: Any | None) -> None:
-        setattr(self._binding, "type", value)
-
-    @property
-    def cache_ttl(self) -> int | float | None:
-        return _jsnull_to_none(self._binding.cacheTtl)
-    
-    @cache_ttl.setter
-    def cache_ttl(self, value: int | float | None) -> None:
-        self._binding.cacheTtl = value
-
     @overload
     async def get(self, key: str, options: Any | None = None) -> str | None: ...
     @overload

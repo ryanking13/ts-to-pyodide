@@ -76,6 +76,7 @@ function flattenSyntheticTypes(topLevels: TopLevels): void {
   const byName = new Map(ifaces.map((ir) => [ir.name, ir]));
 
   const parentToChildren = new Map<string, InterfaceIR[]>();
+  const sigDerived = new Set<string>();
   for (const ir of ifaces) {
     const idx = ir.name.indexOf("__");
     if (idx === -1) continue;
@@ -86,6 +87,12 @@ function flattenSyntheticTypes(topLevels: TopLevels): void {
       parentToChildren.set(parentName, children);
     }
     children.push(ir);
+    // Synthetic types from method signature parameters (contain __Sig\d+__)
+    // should be removed but NOT have their properties merged into the parent.
+    const suffix = ir.name.substring(idx);
+    if (/Sig\d+/.test(suffix)) {
+      sigDerived.add(ir.name);
+    }
   }
 
   for (const [parentName] of parentToChildren) {
@@ -110,18 +117,20 @@ function flattenSyntheticTypes(topLevels: TopLevels): void {
 
     const allProps = new Map<string, PropertyIR>();
     for (const child of children) {
-      for (const prop of child.properties) {
-        const existing = allProps.get(prop.name);
-        if (!existing) {
-          allProps.set(prop.name, { ...prop });
-        } else if (JSON.stringify(existing.type) !== JSON.stringify(prop.type)) {
-          const a = existing.type;
-          const b = prop.type;
-          if (a.kind === "simple" && b.kind === "simple" &&
-              a.text.startsWith("Literal[") && b.text.startsWith("Literal[")) {
-            existing.type = { kind: "simple", text: "bool" };
-          } else {
-            existing.type = { kind: "union", types: [a, b] };
+      if (!sigDerived.has(child.name)) {
+        for (const prop of child.properties) {
+          const existing = allProps.get(prop.name);
+          if (!existing) {
+            allProps.set(prop.name, { ...prop });
+          } else if (JSON.stringify(existing.type) !== JSON.stringify(prop.type)) {
+            const a = existing.type;
+            const b = prop.type;
+            if (a.kind === "simple" && b.kind === "simple" &&
+                a.text.startsWith("Literal[") && b.text.startsWith("Literal[")) {
+              existing.type = { kind: "simple", text: "bool" };
+            } else {
+              existing.type = { kind: "union", types: [a, b] };
+            }
           }
         }
       }
