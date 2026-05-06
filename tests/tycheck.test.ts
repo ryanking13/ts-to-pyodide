@@ -21,13 +21,21 @@ import {
 
 const renderer = new Renderer();
 
+// Stub for the Pyodide `import js` module (maps to globalThis at runtime).
+// ty can't resolve it because it's registered dynamically by Pyodide's import hook.
+const JS_STUB = `\
+from typing import Any
+def __getattr__(name: str) -> Any: ...
+`;
+
 function checkTy(code: string): void {
   const dir = mkdtempSync(join(tmpdir(), "ty-test-"));
   const file = join(dir, "test.py");
   try {
+    writeFileSync(join(dir, "js.pyi"), JS_STUB);
     writeFileSync(file, code);
     execSync(
-      `uvx --with pyodide-py==0.28.2 --python 3.13 ty check ${file}`,
+      `uvx --with pyodide-py==0.28.2 --python 3.13 ty check --extra-search-path ${dir} ${file}`,
       { encoding: "utf-8", timeout: 30_000 },
     );
   } catch (e: any) {
