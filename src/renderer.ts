@@ -99,17 +99,54 @@ export class Renderer {
     this.knownInterfaces = buildKnownInterfacesMap(
       deduped.map((ir) => ir.name),
     );
-    this.dataBagNames = new Set();
-    for (const ir of deduped) {
-      if (this.isDataBag(ir)) {
-        this.dataBagNames.add(ir.name);
-        this.dataBagNames.add(stripIfaceSuffix(ir.name));
-      }
-    }
+    this.dataBagNames = this.classifyDataBags(deduped);
     const bodies = deduped.map((ir) =>
       this.dataBagNames.has(ir.name) ? this.renderTypedDict(ir) : this.renderInterface(ir),
     );
     return PRELUDE + "\n" + bodies.join("\n\n");
+  }
+
+  private classifyDataBags(interfaces: InterfaceIR[]): Set<string> {
+    const candidates = new Set<string>();
+    for (const ir of interfaces) {
+      if (this.isDataBag(ir)) {
+        candidates.add(ir.name);
+        candidates.add(stripIfaceSuffix(ir.name));
+      }
+    }
+    let changed = true;
+    while (changed) {
+      changed = false;
+      for (const ir of interfaces) {
+        if (!candidates.has(ir.name)) continue;
+        if (this.hasWrapperClassRefs(ir, candidates)) {
+          candidates.delete(ir.name);
+          candidates.delete(stripIfaceSuffix(ir.name));
+          changed = true;
+        }
+      }
+    }
+    return candidates;
+  }
+
+  private hasWrapperClassRefs(ir: InterfaceIR, dataBags: Set<string>): boolean {
+    for (const prop of ir.properties) {
+      if (this.typeRefsWrapperClass(prop.type, dataBags)) return true;
+    }
+    return false;
+  }
+
+  private typeRefsWrapperClass(ir: TypeIR, dataBags: Set<string>): boolean {
+    if (ir.kind === "reference") {
+      return this.knownInterfaces.has(ir.name) && !dataBags.has(ir.name);
+    }
+    if (ir.kind === "union") {
+      return ir.types.some((t) => this.typeRefsWrapperClass(t, dataBags));
+    }
+    if (ir.kind === "array") {
+      return this.typeRefsWrapperClass(ir.type, dataBags);
+    }
+    return false;
   }
 
   // A TypeScript object that only has properties and no methods is considered a data bag
@@ -183,6 +220,12 @@ export class Renderer {
       "",
       "    def __getattr__(self, name: str) -> Any:",
       "        return getattr(self._binding, name)",
+      "",
+      "    def __getitem__(self, key: str) -> Any:",
+      "        return getattr(self, _to_snake(key))",
+      "",
+      "    def __setitem__(self, key: str, value: Any) -> None:",
+      "        setattr(self, _to_snake(key), value)",
     );
 
     for (const prop of ir.properties) {

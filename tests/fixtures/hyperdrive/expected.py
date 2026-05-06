@@ -14,6 +14,12 @@ class Hyperdrive:
     def __getattr__(self, name: str) -> Any:
         return getattr(self._binding, name)
 
+    def __getitem__(self, key: str) -> Any:
+        return getattr(self, _to_snake(key))
+
+    def __setitem__(self, key: str, value: Any) -> None:
+        setattr(self, _to_snake(key), value)
+
     @property
     def connection_string(self) -> str:
         return self._binding.connectionString

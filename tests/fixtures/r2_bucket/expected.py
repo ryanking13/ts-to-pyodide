@@ -65,6 +65,12 @@ class R2Object:
     def __getattr__(self, name: str) -> Any:
         return getattr(self._binding, name)
 
+    def __getitem__(self, key: str) -> Any:
+        return getattr(self, _to_snake(key))
+
+    def __setitem__(self, key: str, value: Any) -> None:
+        setattr(self, _to_snake(key), value)
+
     @property
     def key(self) -> str:
         return self._binding.key
@@ -130,6 +136,12 @@ class R2Bucket:
     def __getattr__(self, name: str) -> Any:
         return getattr(self._binding, name)
 
+    def __getitem__(self, key: str) -> Any:
+        return getattr(self, _to_snake(key))
+
+    def __setitem__(self, key: str, value: Any) -> None:
+        setattr(self, _to_snake(key), value)
+
     async def head(self, key: str) -> R2Object | None:
         _v = _jsnull_to_none(await self._binding.head(key))
         return R2Object.from_js(_v) if _v is not None else None
@@ -151,7 +163,7 @@ class R2Bucket:
         await self._binding.delete(to_js(keys))
 
     async def list(self, options: R2ListOptions | None = None) -> R2Objects:
-        return _from_js_opts(await self._binding.list(_to_js_opts(options)))
+        return R2Objects.from_js(await self._binding.list(_to_js_opts(options)))
 
     async def __getitem__(self, key: str, options: R2GetOptions | None = None) -> R2ObjectBody | None:
         _v = _jsnull_to_none(await self._binding.__getitem__(key, _to_js_opts(options)))
@@ -176,6 +188,12 @@ class R2Checksums:
 
     def __getattr__(self, name: str) -> Any:
         return getattr(self._binding, name)
+
+    def __getitem__(self, key: str) -> Any:
+        return getattr(self, _to_snake(key))
+
+    def __setitem__(self, key: str, value: Any) -> None:
+        setattr(self, _to_snake(key), value)
 
     @property
     def md5(self) -> JsBuffer | None:
@@ -222,6 +240,12 @@ class R2ObjectBody:
 
     def __getattr__(self, name: str) -> Any:
         return getattr(self._binding, name)
+
+    def __getitem__(self, key: str) -> Any:
+        return getattr(self, _to_snake(key))
+
+    def __setitem__(self, key: str, value: Any) -> None:
+        setattr(self, _to_snake(key), value)
 
     @property
     def body(self) -> Any:
@@ -284,6 +308,12 @@ class R2MultipartUpload:
     def __getattr__(self, name: str) -> Any:
         return getattr(self._binding, name)
 
+    def __getitem__(self, key: str) -> Any:
+        return getattr(self, _to_snake(key))
+
+    def __setitem__(self, key: str, value: Any) -> None:
+        setattr(self, _to_snake(key), value)
+
     @property
     def key(self) -> str:
         return self._binding.key
@@ -321,8 +351,56 @@ class R2UploadedPart(TypedDict):
     etag: str
 
 
-class R2Objects(TypedDict):
-    objects: list[R2Object]
-    delimited_prefixes: list[str]
-    truncated: bool
-    cursor: str | None
+class R2Objects:
+    _binding: Any
+
+    @classmethod
+    def from_js(cls, js_obj: JsProxy) -> R2Objects:
+        instance = object.__new__(cls)
+        instance._binding = js_obj
+        return instance
+
+    @property
+    def js_object(self) -> JsProxy:
+        return self._binding
+
+    def __getattr__(self, name: str) -> Any:
+        return getattr(self._binding, name)
+
+    def __getitem__(self, key: str) -> Any:
+        return getattr(self, _to_snake(key))
+
+    def __setitem__(self, key: str, value: Any) -> None:
+        setattr(self, _to_snake(key), value)
+
+    @property
+    def objects(self) -> list[R2Object]:
+        return self._binding.objects
+    
+    @objects.setter
+    def objects(self, value: list[R2Object]) -> None:
+        self._binding.objects = value
+
+    @property
+    def delimited_prefixes(self) -> list[str]:
+        return self._binding.delimitedPrefixes
+    
+    @delimited_prefixes.setter
+    def delimited_prefixes(self, value: list[str]) -> None:
+        self._binding.delimitedPrefixes = value
+
+    @property
+    def truncated(self) -> bool:
+        return self._binding.truncated
+    
+    @truncated.setter
+    def truncated(self, value: bool) -> None:
+        self._binding.truncated = value
+
+    @property
+    def cursor(self) -> str | None:
+        return _jsnull_to_none(self._binding.cursor)
+    
+    @cursor.setter
+    def cursor(self, value: str | None) -> None:
+        self._binding.cursor = value
