@@ -25,4 +25,4 @@ class D1PreparedStatement:
     @overload
     async def first(self) -> Any | None: ...
     async def first(self, *args: Any, **kwargs: Any) -> Any:
-        return await self._binding.first(*args, **kwargs)
+        return _jsnull_to_none(await self._binding.first(*args, **kwargs))
