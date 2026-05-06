@@ -3,8 +3,8 @@ from typing import Any, TypedDict, overload
 import js
 from pyodide.ffi import JsBuffer, JsProxy, create_proxy, to_js
 
-def _call_js_method(binding: Any, method: str, *args: Any, **kwargs: Any) -> Any:
-    return js.Reflect.get(binding, method)(*args, **kwargs)
+def _call_js_method(binding: Any, method: str, *args: Any) -> Any:
+    return js.Reflect.apply(js.Reflect.get(binding, method), binding, to_js(args))
 
 def _jsnull_to_none(value: Any) -> Any:
     try:

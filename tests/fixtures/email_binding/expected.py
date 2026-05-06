@@ -3,8 +3,8 @@ from typing import Any, TypedDict, overload
 import js
 from pyodide.ffi import JsBuffer, JsProxy, create_proxy, to_js
 
-def _call_js_method(binding: Any, method: str, *args: Any, **kwargs: Any) -> Any:
-    return js.Reflect.get(binding, method)(*args, **kwargs)
+def _call_js_method(binding: Any, method: str, *args: Any) -> Any:
+    return js.Reflect.apply(js.Reflect.get(binding, method), binding, to_js(args))
 
 def _jsnull_to_none(value: Any) -> Any:
     try:
@@ -75,6 +75,12 @@ class SendEmail:
     def __getattr__(self, name: str) -> Any:
         return getattr(self._binding, name)
 
+    def __getitem__(self, key: str) -> Any:
+        return getattr(self, _to_snake(key))
+
+    def __setitem__(self, key: str, value: Any) -> None:
+        setattr(self, _to_snake(key), value)
+
     async def send(self, message: EmailMessage) -> EmailSendResult:
         return _from_js_opts(await _call_js_method(self._binding, "send", _to_js_opts(message)))
 
@@ -94,6 +100,12 @@ class ForwardableEmailMessage:
 
     def __getattr__(self, name: str) -> Any:
         return getattr(self._binding, name)
+
+    def __getitem__(self, key: str) -> Any:
+        return getattr(self, _to_snake(key))
+
+    def __setitem__(self, key: str, value: Any) -> None:
+        setattr(self, _to_snake(key), value)
 
     @property
     def raw(self) -> Any:
