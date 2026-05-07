@@ -17,7 +17,7 @@ export const NATIVE_TYPES: Record<string, NativeTypeInfo> = {
   },
 };
 
-const REFERENCE_TYPE_MAP: Record<string, string> = {
+export const REFERENCE_TYPE_MAP: Record<string, string> = {
   ArrayBuffer: "JsBuffer",
   ArrayBufferLike: "JsBuffer",
   ArrayBufferView_iface: "JsBuffer",
@@ -43,8 +43,10 @@ export function renderType(
       return ir.text;
     case "number":
       return "int | float";
-    case "union":
-      return ir.types.map((t) => renderType(t, knownInterfaces)).join(" | ");
+    case "union": {
+      const parts = ir.types.map((t) => renderType(t, knownInterfaces));
+      return [...new Set(parts)].join(" | ");
+    }
     case "reference": {
       if (ir.name.startsWith("Promise")) {
         const args = ir.typeArgs;
@@ -53,7 +55,7 @@ export function renderType(
         }
         return ir.name;
       }
-      if (ir.name === "Record" && ir.typeArgs.length === 2) {
+      if ((ir.name === "Record" || ir.name === "Map") && ir.typeArgs.length === 2) {
         const k = renderType(ir.typeArgs[0], knownInterfaces);
         const v = renderType(ir.typeArgs[1], knownInterfaces);
         return `dict[${k}, ${v}]`;
@@ -157,7 +159,7 @@ export function needsCreateProxy(ir: TypeIR): boolean {
 }
 
 export function needsToPy(ir: TypeIR): boolean {
-  if (ir.kind === "reference" && ir.name === "Record") return true;
+  if (ir.kind === "reference" && (ir.name === "Record" || ir.name === "Map")) return true;
   if (ir.kind === "union") {
     return ir.types.some((t) => !(t.kind === "simple" && t.text === "None") && needsToPy(t));
   }

@@ -20,12 +20,8 @@ class Stmt:
     def __setitem__(self, key: str, value: Any) -> None:
         setattr(self, _to_snake(key), value)
 
-    @overload
-    async def first(self, col_name: str) -> Any | None: ...
-    @overload
-    async def first(self) -> Any | None: ...
     async def first(self, *args: Any, **kwargs: Any) -> Any:
-        return await self._binding.first(*args, **kwargs)
+        return _auto_to_py(_jsnull_to_none(await self._binding.first(*args, **kwargs)))
 
     async def run(self) -> Any:
         return await self._binding.run()

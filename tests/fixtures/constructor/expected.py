@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import Any, TypedDict, overload
+from typing import Any, Literal, TypedDict, overload
 import js
 from pyodide.ffi import JsBuffer, JsProxy, create_proxy, to_js
 
@@ -10,6 +10,18 @@ def _jsnull_to_none(value: Any) -> Any:
         return value
     if value is jsnull:
         return None
+    return value
+
+def _auto_to_py(value: Any) -> Any:
+    if isinstance(value, JsProxy):
+        try:
+            value = value.to_py()
+        except Exception:
+            return value
+    if isinstance(value, dict):
+        return {k: _auto_to_py(_jsnull_to_none(v)) for k, v in value.items()}
+    if isinstance(value, list):
+        return [_auto_to_py(_jsnull_to_none(v)) for v in value]
     return value
 
 def _to_camel(s: str) -> str:
@@ -35,6 +47,9 @@ def _from_js_opts(js_obj: Any) -> Any:
     if js_obj is None:
         return None
     def _convert(v: Any) -> Any:
+        v = _jsnull_to_none(v)
+        if v is None:
+            return None
         if isinstance(v, dict):
             return {_to_snake(k): _convert(val) for k, val in v.items()}
         if isinstance(v, list):
@@ -85,15 +100,3 @@ class Headers:
 
     def delete(self, name: str) -> None:
         self._binding.delete(name)
-
-    def __contains__(self, name: str) -> bool:
-        return self._binding.__contains__(name)
-
-    def __getitem__(self, name: str) -> str | None:
-        return _jsnull_to_none(self._binding.__getitem__(name))
-
-    def __setitem__(self, name: str, value: str) -> None:
-        self._binding.__setitem__(name, value)
-
-    def __delitem__(self, name: str) -> None:
-        self._binding.__delitem__(name)

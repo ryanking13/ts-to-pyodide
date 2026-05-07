@@ -21,6 +21,7 @@ import {
   isPromise,
   isVoidReturn,
   NATIVE_TYPES,
+  REFERENCE_TYPE_MAP,
   needsCreateProxy,
   needsToJs,
   needsToPy,
@@ -31,7 +32,7 @@ import {
 
 const PRELUDE = `\
 from __future__ import annotations
-from typing import Any, TypedDict, overload
+from typing import Any, Literal, TypedDict, overload
 import js
 from pyodide.ffi import JsBuffer, JsProxy, create_proxy, to_js
 
@@ -42,6 +43,18 @@ def _jsnull_to_none(value: Any) -> Any:
         return value
     if value is jsnull:
         return None
+    return value
+
+def _auto_to_py(value: Any) -> Any:
+    if isinstance(value, JsProxy):
+        try:
+            value = value.to_py()
+        except Exception:
+            return value
+    if isinstance(value, dict):
+        return {k: _auto_to_py(_jsnull_to_none(v)) for k, v in value.items()}
+    if isinstance(value, list):
+        return [_auto_to_py(_jsnull_to_none(v)) for v in value]
     return value
 
 def _to_camel(s: str) -> str:
@@ -67,6 +80,9 @@ def _from_js_opts(js_obj: Any) -> Any:
     if js_obj is None:
         return None
     def _convert(v: Any) -> Any:
+        v = _jsnull_to_none(v)
+        if v is None:
+            return None
         if isinstance(v, dict):
             return {_to_snake(k): _convert(val) for k, val in v.items()}
         if isinstance(v, list):
@@ -95,7 +111,9 @@ export class Renderer {
   // CONSTRUCTOR_MAP dict for runtime dispatch (e.g. KVNamespace → KvNamespace).
   // Needed for downstream auto-wrapping of env bindings by constructor.name.
   renderFile(interfaces: InterfaceIR[]): string {
-    const deduped = this.deduplicateInterfaces(interfaces);
+    const deduped = this.deduplicateInterfaces(interfaces).filter(
+      (ir) => !(ir.name in REFERENCE_TYPE_MAP || stripIfaceSuffix(ir.name) in REFERENCE_TYPE_MAP),
+    );
     this.knownInterfaces = buildKnownInterfacesMap(
       deduped.map((ir) => ir.name),
     );
@@ -268,6 +286,10 @@ export class Renderer {
     if (!isValidPythonIdentifier(jsName)) return "";
     // Skip "new" — constructor rendering is handled by renderConstructor
     if (jsName === "new" && method.isStatic) return "";
+    // TODO: (check if this breaks anything) Pyodide add these methods automatically to make JS objects behave like Python objects
+    // Let's skip them to avoid conflicts for now
+    const SKIP_DUNDERS = new Set(["__getitem__", "__setitem__", "__delitem__", "__contains__"]);
+    if (SKIP_DUNDERS.has(jsName)) return "";
 
     const sigs = method.signatures;
     if (sigs.length === 0) return "";
@@ -283,12 +305,7 @@ export class Renderer {
       return this.renderSingleSig(jsName, pyName, effectiveSigs[0]);
     }
 
-    const parts: string[] = [];
-    for (const sig of effectiveSigs) {
-      parts.push(this.renderOverloadStub(pyName, sig));
-    }
-    parts.push(this.renderOverloadImpl(jsName, pyName, effectiveSigs));
-    return parts.join("\n");
+    return this.renderOverloadImpl(jsName, pyName, effectiveSigs);
   }
 
   private renderSingleSig(
@@ -349,6 +366,73 @@ export class Renderer {
     return `@overload\n${prefix}def ${pyName}(${paramList}) -> ${returnType}: ...`;
   }
 
+  private analyzeOverloadArgs(sigs: SigIR[]): {
+    maxParams: number;
+    toJsOpts: boolean[];
+    toJs: boolean[];
+  } {
+    const maxParams = Math.max(...sigs.map((s) => s.params.length));
+    const toJsOpts: boolean[] = new Array(maxParams).fill(false);
+    const toJs: boolean[] = new Array(maxParams).fill(false);
+
+    for (let i = 0; i < maxParams; i++) {
+      for (const sig of sigs) {
+        const param = sig.params[i];
+        if (!param) continue;
+        if (this.isDataBagType(param.type)) {
+          toJsOpts[i] = true;
+        } else if (needsToJs(param.type)) {
+          toJs[i] = true;
+        }
+      }
+      // _to_js_opts subsumes to_js for that position
+      if (toJsOpts[i]) toJs[i] = false;
+    }
+    return { maxParams, toJsOpts, toJs };
+  }
+
+  private classifyReturnConversion(returns: TypeIR): string {
+    const wrapperClass = resolveKnownInterface(returns, this.knownInterfaces);
+    const isDataBag = wrapperClass ? this.dataBagNames.has(wrapperClass) : false;
+    const nullable = isNullable(returns);
+    const toPy = needsToPy(returns);
+
+    if (isVoidReturn(returns)) return "void";
+    if (wrapperClass && !isDataBag) return nullable ? "wrapper_nullable" : "wrapper";
+    if (isDataBag) return nullable ? "databag_nullable" : "databag";
+    if (toPy) return nullable ? "topy_nullable" : "topy";
+    if (nullable) return "nullable";
+    return "plain";
+  }
+
+  private emitReturnWrap(rawCall: string, kind: string, sig?: SigIR): string {
+    let wrapperClass: string | undefined;
+    if (sig && (kind === "wrapper" || kind === "wrapper_nullable")) {
+      const ret = isPromise(sig.returns) ? unwrapPromise(sig.returns) : sig.returns;
+      wrapperClass = resolveKnownInterface(ret, this.knownInterfaces);
+    }
+    switch (kind) {
+      case "void":
+        return rawCall;
+      case "wrapper_nullable":
+        return `_jsnull_to_none(${rawCall})`;
+      case "wrapper":
+        return `${wrapperClass}.from_js(${rawCall})` ;
+      case "databag_nullable":
+        return `_from_js_opts(_jsnull_to_none(${rawCall}))`;
+      case "databag":
+        return `_from_js_opts(${rawCall})`;
+      case "topy_nullable":
+        return `_auto_to_py(_jsnull_to_none(${rawCall}))`;
+      case "topy":
+        return `_auto_to_py(${rawCall})`;
+      case "nullable":
+        return `_auto_to_py(_jsnull_to_none(${rawCall}))`;
+      default:
+        return `_auto_to_py(${rawCall})`;
+    }
+  }
+
   private renderOverloadImpl(
     jsName: string,
     pyName: string,
@@ -356,15 +440,137 @@ export class Renderer {
   ): string {
     const anyAsync = sigs.some((s) => isPromise(s.returns));
     const prefix = anyAsync ? "async " : "";
-    let call = jsMethodCall("self._binding", jsName, "*args, **kwargs");
-    if (anyAsync) {
-      call = `await ${call}`;
+
+    const { maxParams, toJsOpts, toJs } = this.analyzeOverloadArgs(sigs);
+    const needsArgConversion = toJsOpts.some(Boolean) || toJs.some(Boolean);
+
+    const returnKinds = sigs.map((s) => {
+      const ret = isPromise(s.returns) ? unwrapPromise(s.returns) : s.returns;
+      return this.classifyReturnConversion(ret);
+    });
+    const uniqueKinds = new Set(returnKinds);
+    const uniformReturn = uniqueKinds.size === 1;
+
+    const argVar = needsArgConversion ? "_a" : "args";
+    const kwVar = "kwargs";
+
+    const lines: string[] = [];
+    lines.push(`${prefix}def ${pyName}(self, *args: Any, **kwargs: Any) -> Any:`);
+
+    if (needsArgConversion) {
+      lines.push("    _a = list(args)");
+      for (let i = 0; i < maxParams; i++) {
+        if (toJsOpts[i]) {
+          lines.push(`    if len(_a) > ${i} and isinstance(_a[${i}], dict):`);
+          lines.push(`        _a[${i}] = _to_js_opts(_a[${i}])`);
+        } else if (toJs[i]) {
+          lines.push(`    if len(_a) > ${i}:`);
+          lines.push(`        _a[${i}] = to_js(_a[${i}])`);
+        }
+      }
     }
 
-    return (
-      `${prefix}def ${pyName}(self, *args: Any, **kwargs: Any) -> Any:\n` +
-      `    return ${call}`
-    );
+    let rawCall = jsMethodCall("self._binding", jsName, `*${argVar}, **${kwVar}`);
+    if (anyAsync) rawCall = `await ${rawCall}`;
+
+    if (uniformReturn) {
+      const wrapped = this.emitReturnWrap(rawCall, returnKinds[0], sigs[0]);
+      lines.push(`    return ${wrapped}`);
+    } else {
+      // Find the discriminating param position: first position where different
+      // return-kind groups have different param types (str vs list, etc.)
+      const dispatchPos = this.findDispatchPosition(sigs, returnKinds);
+      if (dispatchPos !== undefined) {
+        lines.push(`    _r = ${rawCall}`);
+        const grouped = this.groupByReturnKind(sigs, returnKinds);
+        let first = true;
+        for (const [kind, groupSigs] of grouped) {
+          const paramType = groupSigs[0].params[dispatchPos]?.type;
+          const condition = this.emitDispatchCondition(dispatchPos, paramType);
+          const kw = first ? "if" : "elif";
+          lines.push(`    ${kw} ${condition}:`);
+          lines.push(`        return ${this.emitReturnWrap("_r", kind, groupSigs[0])}`);
+          first = false;
+        }
+        lines.push(`    return _r`);
+      } else {
+        // Fallback: use the safest conversion (nullable if any nullable)
+        const anyNullable = returnKinds.some((k) => k.includes("nullable") || k === "nullable");
+        const wrapped = anyNullable
+          ? `_jsnull_to_none(${rawCall})`
+          : rawCall;
+        lines.push(`    return ${wrapped}`);
+      }
+    }
+
+    return lines.join("\n");
+  }
+
+  private emitDispatchCondition(pos: number, paramType?: TypeIR): string {
+    if (!paramType) return `len(args) <= ${pos}`;
+    if (paramType.kind === "array" ||
+        (paramType.kind === "reference" && paramType.name === "Array")) {
+      return `isinstance(args[${pos}], list)`;
+    }
+    if (paramType.kind === "simple" && paramType.text === "str") {
+      return `isinstance(args[${pos}], str)`;
+    }
+    if (paramType.kind === "simple" && paramType.text === "bool") {
+      return `isinstance(args[${pos}], bool)`;
+    }
+    if (paramType.kind === "number") {
+      return `isinstance(args[${pos}], (int, float))`;
+    }
+    return `isinstance(args[${pos}], str)`;
+  }
+
+  private findDispatchPosition(
+    sigs: SigIR[],
+    returnKinds: string[],
+  ): number | undefined {
+    const maxParams = Math.max(...sigs.map((s) => s.params.length));
+    for (let pos = 0; pos < maxParams; pos++) {
+      const kindsByParamSimpleType = new Map<string, Set<string>>();
+      for (let i = 0; i < sigs.length; i++) {
+        const param = sigs[i].params[pos];
+        if (!param) continue;
+        const simpleKey = renderType(param.type, this.knownInterfaces);
+        let kinds = kindsByParamSimpleType.get(simpleKey);
+        if (!kinds) {
+          kinds = new Set();
+          kindsByParamSimpleType.set(simpleKey, kinds);
+        }
+        kinds.add(returnKinds[i]);
+      }
+      if (kindsByParamSimpleType.size >= 2) {
+        const allSetsDisjoint = [...kindsByParamSimpleType.values()].every(
+          (setA, idxA, arr) =>
+            arr.every(
+              (setB, idxB) =>
+                idxA === idxB || [...setA].every((k) => !setB.has(k)),
+            ),
+        );
+        if (allSetsDisjoint) return pos;
+      }
+    }
+    return undefined;
+  }
+
+  private groupByReturnKind(
+    sigs: SigIR[],
+    returnKinds: string[],
+  ): Map<string, SigIR[]> {
+    const grouped = new Map<string, SigIR[]>();
+    for (let i = 0; i < sigs.length; i++) {
+      const kind = returnKinds[i];
+      let group = grouped.get(kind);
+      if (!group) {
+        group = [];
+        grouped.set(kind, group);
+      }
+      group.push(sigs[i]);
+    }
+    return grouped;
   }
 
   private renderProperty(prop: PropertyIR): string {

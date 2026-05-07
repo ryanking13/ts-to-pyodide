@@ -128,6 +128,26 @@ describe("e2e: R2 bucket (.d.ts → IR → renderFile)", () => {
   });
 });
 
+describe("e2e: KV namespace (.d.ts → IR → renderFile)", () => {
+  it("kv_namespace: overloads, reserved word delete, TypedDict options, nullable returns", () => {
+    const inputDts = readFileSync(
+      resolve(FIXTURES_DIR, "kv_namespace", "input.d.ts"),
+      "utf-8",
+    );
+    const expectedPy = readFileSync(
+      resolve(FIXTURES_DIR, "kv_namespace", "expected.py"),
+      "utf-8",
+    );
+
+    const project = makeProject();
+    project.createSourceFile("/fixture.d.ts", inputDts);
+    const result = convertToIR([project.getSourceFileOrThrow("/fixture.d.ts")]);
+
+    const output = renderer.renderFile(result.topLevels.ifaces);
+    assert.strictEqual(output, expectedPy);
+  });
+});
+
 describe("e2e: options as TypedDict (.d.ts → IR → renderFile)", () => {
   it("kwparams: options bag rendered as TypedDict with snake_case keys", () => {
     const inputDts = readFileSync(

@@ -64,11 +64,11 @@ def _to_js_headers(headers: dict[str, str] | list[tuple[str, str]] | JsProxy) ->
         return js.Headers.new(headers)
     return headers
 
-class PipelineEntrypoint:
+class KVNamespace:
     _binding: Any
 
     @classmethod
-    def from_js(cls, js_obj: JsProxy) -> PipelineEntrypoint:
+    def from_js(cls, js_obj: JsProxy) -> KVNamespace:
         instance = object.__new__(cls)
         instance._binding = js_obj
         return instance
@@ -86,31 +86,73 @@ class PipelineEntrypoint:
     def __setitem__(self, key: str, value: Any) -> None:
         setattr(self, _to_snake(key), value)
 
-    async def run(self, records: list[Any]) -> list[Any]:
-        return await self._binding.run(to_js(records))
+    async def get(self, *args: Any, **kwargs: Any) -> Any:
+        _a = list(args)
+        if len(_a) > 0:
+            _a[0] = to_js(_a[0])
+        if len(_a) > 1 and isinstance(_a[1], dict):
+            _a[1] = _to_js_opts(_a[1])
+        _r = await self._binding.get(*_a, **kwargs)
+        if isinstance(args[0], str):
+            return _auto_to_py(_jsnull_to_none(_r))
+        elif isinstance(args[0], list):
+            return _auto_to_py(_r)
+        return _r
+
+    async def list(self, options: KVNamespaceListOptions | None = None) -> KVNamespaceListResult:
+        return _from_js_opts(await self._binding.list(_to_js_opts(options)))
+
+    async def put(self, key: str, value: str | JsBuffer | Any, options: KVNamespacePutOptions | None = None) -> None:
+        await self._binding.put(key, to_js(value), _to_js_opts(options))
+
+    async def get_with_metadata(self, *args: Any, **kwargs: Any) -> Any:
+        _a = list(args)
+        if len(_a) > 0:
+            _a[0] = to_js(_a[0])
+        if len(_a) > 1 and isinstance(_a[1], dict):
+            _a[1] = _to_js_opts(_a[1])
+        _r = await self._binding.getWithMetadata(*_a, **kwargs)
+        if isinstance(args[0], str):
+            return _from_js_opts(_r)
+        elif isinstance(args[0], list):
+            return _auto_to_py(_r)
+        return _r
+
+    async def delete(self, key: str) -> None:
+        await self._binding.delete(key)
 
 
-class Pipeline:
-    _binding: Any
+class KVNamespaceGetOptions(TypedDict):
+    type_: Any
+    cache_ttl: int | float | None
 
-    @classmethod
-    def from_js(cls, js_obj: JsProxy) -> Pipeline:
-        instance = object.__new__(cls)
-        instance._binding = js_obj
-        return instance
 
-    @property
-    def js_object(self) -> JsProxy:
-        return self._binding
+class KVNamespaceListOptions(TypedDict, total=False):
+    limit: int | float
+    prefix: str | None
+    cursor: str | None
 
-    def __getattr__(self, name: str) -> Any:
-        return getattr(self._binding, name)
 
-    def __getitem__(self, key: str) -> Any:
-        return getattr(self, _to_snake(key))
+class KVNamespacePutOptions(TypedDict, total=False):
+    expiration: int | float
+    expiration_ttl: int | float
+    metadata: Any | None
 
-    def __setitem__(self, key: str, value: Any) -> None:
-        setattr(self, _to_snake(key), value)
 
-    async def send(self, records: list[Any]) -> None:
-        await self._binding.send(to_js(records))
+class KVNamespaceGetWithMetadataResult(TypedDict):
+    value: Any | None
+    metadata: Any | None
+    cache_status: str | None
+
+
+class KVNamespaceListKey(TypedDict):
+    name: str
+    expiration: int | float | None
+    metadata: Any | None
+
+
+class KVNamespaceListResult(TypedDict):
+    list_complete: bool
+    keys: list[KVNamespaceListKey]
+    cursor: str | None
+    cache_status: str | None

@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import Any, TypedDict, overload
+from typing import Any, Literal, TypedDict, overload
 import js
 from pyodide.ffi import JsBuffer, JsProxy, create_proxy, to_js
 
@@ -10,6 +10,18 @@ def _jsnull_to_none(value: Any) -> Any:
         return value
     if value is jsnull:
         return None
+    return value
+
+def _auto_to_py(value: Any) -> Any:
+    if isinstance(value, JsProxy):
+        try:
+            value = value.to_py()
+        except Exception:
+            return value
+    if isinstance(value, dict):
+        return {k: _auto_to_py(_jsnull_to_none(v)) for k, v in value.items()}
+    if isinstance(value, list):
+        return [_auto_to_py(_jsnull_to_none(v)) for v in value]
     return value
 
 def _to_camel(s: str) -> str:
@@ -35,6 +47,9 @@ def _from_js_opts(js_obj: Any) -> Any:
     if js_obj is None:
         return None
     def _convert(v: Any) -> Any:
+        v = _jsnull_to_none(v)
+        if v is None:
+            return None
         if isinstance(v, dict):
             return {_to_snake(k): _convert(val) for k, val in v.items()}
         if isinstance(v, list):
@@ -150,7 +165,7 @@ class R2Bucket:
         _v = _jsnull_to_none(await self._binding.get(key, _to_js_opts(options)))
         return R2ObjectBody.from_js(_v) if _v is not None else None
 
-    async def put(self, key: str, value: Any | JsBuffer | str | Any | None, options: R2PutOptions | None = None) -> R2Object:
+    async def put(self, key: str, value: Any | JsBuffer | str | None, options: R2PutOptions | None = None) -> R2Object:
         return R2Object.from_js(await self._binding.put(key, to_js(value), _to_js_opts(options)))
 
     async def create_multipart_upload(self, key: str, options: R2MultipartOptions | None = None) -> R2MultipartUpload:
@@ -164,13 +179,6 @@ class R2Bucket:
 
     async def list(self, options: R2ListOptions | None = None) -> R2Objects:
         return R2Objects.from_js(await self._binding.list(_to_js_opts(options)))
-
-    async def __getitem__(self, key: str, options: R2GetOptions | None = None) -> R2ObjectBody | None:
-        _v = _jsnull_to_none(await self._binding.__getitem__(key, _to_js_opts(options)))
-        return R2ObjectBody.from_js(_v) if _v is not None else None
-
-    async def __delitem__(self, keys: str | list[str]) -> None:
-        await self._binding.__delitem__(to_js(keys))
 
 
 class R2Checksums:
@@ -322,7 +330,7 @@ class R2MultipartUpload:
     def upload_id(self) -> str:
         return self._binding.uploadId
 
-    async def upload_part(self, part_number: int | float, value: Any | JsBuffer | str | Any) -> R2UploadedPart:
+    async def upload_part(self, part_number: int | float, value: Any | JsBuffer | str) -> R2UploadedPart:
         return _from_js_opts(await self._binding.uploadPart(part_number, to_js(value)))
 
     async def abort(self) -> None:
