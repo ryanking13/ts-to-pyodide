@@ -85,15 +85,3 @@ class Headers:
 
     def delete(self, name: str) -> None:
         self._binding.delete(name)
-
-    def __contains__(self, name: str) -> bool:
-        return self._binding.__contains__(name)
-
-    def __getitem__(self, name: str) -> str | None:
-        return _jsnull_to_none(self._binding.__getitem__(name))
-
-    def __setitem__(self, name: str, value: str) -> None:
-        self._binding.__setitem__(name, value)
-
-    def __delitem__(self, name: str) -> None:
-        self._binding.__delitem__(name)

@@ -77,9 +77,6 @@ class KVStore:
     async def get(self, key: str) -> str | None:
         return _jsnull_to_none(await self._binding.get(key))
 
-    async def __getitem__(self, key: str) -> str | None:
-        return _jsnull_to_none(await self._binding.__getitem__(key))
-
 
 class KVPutOptions(TypedDict, total=False):
     expiration: int | float

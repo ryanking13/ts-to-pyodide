@@ -271,6 +271,10 @@ export class Renderer {
     if (!isValidPythonIdentifier(jsName)) return "";
     // Skip "new" — constructor rendering is handled by renderConstructor
     if (jsName === "new" && method.isStatic) return "";
+    // TODO: (check if this breaks anything) Pyodide add these methods automatically to make JS objects behave like Python objects
+    // Let's skip them to avoid conflicts for now
+    const SKIP_DUNDERS = new Set(["__getitem__", "__setitem__", "__delitem__", "__contains__"]);
+    if (SKIP_DUNDERS.has(jsName)) return "";
 
     const sigs = method.signatures;
     if (sigs.length === 0) return "";

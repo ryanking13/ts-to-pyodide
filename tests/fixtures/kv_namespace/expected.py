@@ -106,22 +106,6 @@ class KVNamespace:
     async def delete(self, key: str) -> None:
         await self._binding.delete(key)
 
-    async def __getitem__(self, *args: Any, **kwargs: Any) -> Any:
-        _a = list(args)
-        if len(_a) > 0:
-            _a[0] = to_js(_a[0])
-        if len(_a) > 1 and isinstance(_a[1], dict):
-            _a[1] = _to_js_opts(_a[1])
-        _r = await self._binding.__getitem__(*_a, **kwargs)
-        if isinstance(args[0], str):
-            return _jsnull_to_none(_r)
-        elif isinstance(args[0], list):
-            return (_r).to_py()
-        return _r
-
-    async def __delitem__(self, key: str) -> None:
-        await self._binding.__delitem__(key)
-
 
 class KVNamespaceGetOptions(TypedDict):
     type_: Any

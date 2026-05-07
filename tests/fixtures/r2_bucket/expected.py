@@ -165,13 +165,6 @@ class R2Bucket:
     async def list(self, options: R2ListOptions | None = None) -> R2Objects:
         return R2Objects.from_js(await self._binding.list(_to_js_opts(options)))
 
-    async def __getitem__(self, key: str, options: R2GetOptions | None = None) -> R2ObjectBody | None:
-        _v = _jsnull_to_none(await self._binding.__getitem__(key, _to_js_opts(options)))
-        return R2ObjectBody.from_js(_v) if _v is not None else None
-
-    async def __delitem__(self, keys: str | list[str]) -> None:
-        await self._binding.__delitem__(to_js(keys))
-
 
 class R2Checksums:
     _binding: Any
