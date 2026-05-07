@@ -21,4 +21,4 @@ class D1PreparedStatement:
         setattr(self, _to_snake(key), value)
 
     async def first(self, *args: Any, **kwargs: Any) -> Any:
-        return _jsnull_to_none(await self._binding.first(*args, **kwargs))
+        return _auto_to_py(_jsnull_to_none(await self._binding.first(*args, **kwargs)))

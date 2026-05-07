@@ -12,6 +12,18 @@ def _jsnull_to_none(value: Any) -> Any:
         return None
     return value
 
+def _auto_to_py(value: Any) -> Any:
+    if isinstance(value, JsProxy):
+        try:
+            value = value.to_py()
+        except Exception:
+            return value
+    if isinstance(value, dict):
+        return {k: _auto_to_py(_jsnull_to_none(v)) for k, v in value.items()}
+    if isinstance(value, list):
+        return [_auto_to_py(_jsnull_to_none(v)) for v in value]
+    return value
+
 def _to_camel(s: str) -> str:
     parts = s.split("_")
     return parts[0] + "".join(p.capitalize() for p in parts[1:])
@@ -35,6 +47,9 @@ def _from_js_opts(js_obj: Any) -> Any:
     if js_obj is None:
         return None
     def _convert(v: Any) -> Any:
+        v = _jsnull_to_none(v)
+        if v is None:
+            return None
         if isinstance(v, dict):
             return {_to_snake(k): _convert(val) for k, val in v.items()}
         if isinstance(v, list):
@@ -79,9 +94,9 @@ class KVNamespace:
             _a[1] = _to_js_opts(_a[1])
         _r = await self._binding.get(*_a, **kwargs)
         if isinstance(args[0], str):
-            return _jsnull_to_none(_r)
+            return _auto_to_py(_jsnull_to_none(_r))
         elif isinstance(args[0], list):
-            return (_r).to_py()
+            return _auto_to_py(_r)
         return _r
 
     async def list(self, options: KVNamespaceListOptions | None = None) -> KVNamespaceListResult:
@@ -100,7 +115,7 @@ class KVNamespace:
         if isinstance(args[0], str):
             return _from_js_opts(_r)
         elif isinstance(args[0], list):
-            return (_r).to_py()
+            return _auto_to_py(_r)
         return _r
 
     async def delete(self, key: str) -> None:
