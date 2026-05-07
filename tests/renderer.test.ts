@@ -227,7 +227,7 @@ describe("rest params", () => {
       ]),
     );
     assert.ok(result.includes("def bind(self, *values: Any) -> Any:"));
-    assert.ok(result.includes("self._binding.bind(*values)"));
+    assert.ok(result.includes("self._binding.bind(*[_none_to_jsnull(v) for v in values])"));
   });
 
   it("params plus spread", () => {
@@ -244,7 +244,7 @@ describe("rest params", () => {
     assert.ok(
       result.includes("def log(self, message: str, *args: Any) -> None:"),
     );
-    assert.ok(result.includes("self._binding.log(message, *args)"));
+    assert.ok(result.includes("self._binding.log(message, *[_none_to_jsnull(v) for v in args])"));
   });
 });
 
@@ -399,7 +399,7 @@ describe("callable param conversion", () => {
 describe("renderFile", () => {
   it("includes prelude with pyodide imports", () => {
     const result = renderer.renderFile([irInterface("X_iface")]);
-    assert.ok(result.includes("from typing import Any, Literal, TypedDict, overload"));
+    assert.ok(result.includes("from typing import Any, Literal, Never, TypedDict, overload"));
     assert.ok(result.includes("from pyodide.ffi import JsBuffer, JsProxy, create_proxy, to_js"));
     assert.ok(result.includes("def _jsnull_to_none"));
   });

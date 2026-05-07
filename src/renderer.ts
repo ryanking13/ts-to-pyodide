@@ -32,7 +32,7 @@ import {
 
 const PRELUDE = `\
 from __future__ import annotations
-from typing import Any, Literal, TypedDict, overload
+from typing import Any, Literal, Never, TypedDict, overload
 import js
 from pyodide.ffi import JsBuffer, JsProxy, create_proxy, to_js
 
@@ -89,6 +89,15 @@ def _from_js_opts(js_obj: Any) -> Any:
             return [_convert(item) for item in v]
         return v
     return _convert(js_obj.to_py())
+
+def _none_to_jsnull(value: Any) -> Any:
+    if value is None:
+        try:
+            from pyodide.ffi import jsnull
+            return jsnull
+        except ImportError:
+            return value
+    return value
 
 def _to_js_headers(headers: dict[str, str] | list[tuple[str, str]] | JsProxy) -> JsProxy:
     if isinstance(headers, dict):
@@ -334,7 +343,11 @@ export class Renderer {
 
     const argParts = params.map((p) => this.wrapArg(p));
     if (spreadParam) {
-      argParts.push(`*${spreadParam.name}`);
+      // TODO: This is a workaround to make D1.bind work.
+      // There is no clear way to distinguish whether the JS expects null or undefined...
+      // If another edge cases happens, revisit this and maybe let users decide whether to
+      // conver it to null or undefined
+      argParts.push(`*[_none_to_jsnull(v) for v in ${spreadParam.name}]`);
     }
     const argList = argParts.join(", ");
 
@@ -442,7 +455,6 @@ export class Renderer {
     const prefix = anyAsync ? "async " : "";
 
     const { maxParams, toJsOpts, toJs } = this.analyzeOverloadArgs(sigs);
-    const needsArgConversion = toJsOpts.some(Boolean) || toJs.some(Boolean);
 
     const returnKinds = sigs.map((s) => {
       const ret = isPromise(s.returns) ? unwrapPromise(s.returns) : s.returns;
@@ -451,15 +463,24 @@ export class Renderer {
     const uniqueKinds = new Set(returnKinds);
     const uniformReturn = uniqueKinds.size === 1;
 
-    const argVar = needsArgConversion ? "_a" : "args";
+    // When all sigs have kwparams (destructured inline objects like {columnNames: true}),
+    // the user may pass a dict positionally — mark that position for _to_js_opts conversion.
+    let effectiveMaxParams = maxParams;
+    if (sigs.every((s) => s.kwparams?.length && s.params.length === 0)) {
+      toJsOpts[0] = true;
+      effectiveMaxParams = Math.max(effectiveMaxParams, 1);
+    }
+    const needsArgConversionFinal = toJsOpts.some(Boolean) || toJs.some(Boolean);
+
+    const argVar = needsArgConversionFinal ? "_a" : "args";
     const kwVar = "kwargs";
 
     const lines: string[] = [];
     lines.push(`${prefix}def ${pyName}(self, *args: Any, **kwargs: Any) -> Any:`);
 
-    if (needsArgConversion) {
+    if (needsArgConversionFinal) {
       lines.push("    _a = list(args)");
-      for (let i = 0; i < maxParams; i++) {
+      for (let i = 0; i < effectiveMaxParams; i++) {
         if (toJsOpts[i]) {
           lines.push(`    if len(_a) > ${i} and isinstance(_a[${i}], dict):`);
           lines.push(`        _a[${i}] = _to_js_opts(_a[${i}])`);

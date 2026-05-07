@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import Any, Literal, TypedDict, overload
+from typing import Any, Literal, Never, TypedDict, overload
 import js
 from pyodide.ffi import JsBuffer, JsProxy, create_proxy, to_js
 
@@ -56,6 +56,15 @@ def _from_js_opts(js_obj: Any) -> Any:
             return [_convert(item) for item in v]
         return v
     return _convert(js_obj.to_py())
+
+def _none_to_jsnull(value: Any) -> Any:
+    if value is None:
+        try:
+            from pyodide.ffi import jsnull
+            return jsnull
+        except ImportError:
+            return value
+    return value
 
 def _to_js_headers(headers: dict[str, str] | list[tuple[str, str]] | JsProxy) -> JsProxy:
     if isinstance(headers, dict):
