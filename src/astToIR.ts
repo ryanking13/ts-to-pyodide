@@ -609,13 +609,11 @@ export class Converter {
       if (
         Node.isLiteralTypeNode(aliasTypeNode) ||
         aliasTypeNode.getText() in TYPE_TEXT_MAP ||
-        aliasTypeNode.getText() === "number" ||
         (Node.isUnionTypeNode(aliasTypeNode) &&
           aliasTypeNode.getTypeNodes().every(
             (t) =>
               Node.isLiteralTypeNode(t) ||
-              t.getText() in TYPE_TEXT_MAP ||
-              t.getText() === "number",
+              t.getText() in TYPE_TEXT_MAP,
           ))
       ) {
         return this.typeToIR(aliasTypeNode);
