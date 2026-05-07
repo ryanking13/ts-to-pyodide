@@ -108,7 +108,7 @@ class D1Database:
         return D1PreparedStatement.from_js(self._binding.prepare(query))
 
     async def batch(self, statements: list[D1PreparedStatement]) -> list[D1Result]:
-        return await self._binding.batch(to_js(statements))
+        return [_from_js_opts(e) for e in await self._binding.batch(to_js(statements))]
 
     async def exec(self, query: str) -> D1ExecResult:
         return _from_js_opts(await self._binding.exec(query))
@@ -146,7 +146,7 @@ class D1DatabaseSession:
         return D1PreparedStatement.from_js(self._binding.prepare(query))
 
     async def batch(self, statements: list[D1PreparedStatement]) -> list[D1Result]:
-        return await self._binding.batch(to_js(statements))
+        return [_from_js_opts(e) for e in await self._binding.batch(to_js(statements))]
 
     def get_bookmark(self) -> str | None:
         return _jsnull_to_none(self._binding.getBookmark())

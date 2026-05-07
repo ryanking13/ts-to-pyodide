@@ -401,7 +401,7 @@ class R2Objects:
 
     @property
     def objects(self) -> list[R2Object]:
-        return self._binding.objects
+        return [R2Object.from_js(e) for e in self._binding.objects]
     
     @objects.setter
     def objects(self, value: list[R2Object]) -> None:
