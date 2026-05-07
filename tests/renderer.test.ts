@@ -227,7 +227,7 @@ describe("rest params", () => {
       ]),
     );
     assert.ok(result.includes("def bind(self, *values: Any) -> Any:"));
-    assert.ok(result.includes("self._binding.bind(*values)"));
+    assert.ok(result.includes("self._binding.bind(*[_none_to_jsnull(v) for v in values])"));
   });
 
   it("params plus spread", () => {
@@ -244,7 +244,7 @@ describe("rest params", () => {
     assert.ok(
       result.includes("def log(self, message: str, *args: Any) -> None:"),
     );
-    assert.ok(result.includes("self._binding.log(message, *args)"));
+    assert.ok(result.includes("self._binding.log(message, *[_none_to_jsnull(v) for v in args])"));
   });
 });
 

@@ -57,6 +57,15 @@ def _from_js_opts(js_obj: Any) -> Any:
         return v
     return _convert(js_obj.to_py())
 
+def _none_to_jsnull(value: Any) -> Any:
+    if value is None:
+        try:
+            from pyodide.ffi import jsnull
+            return jsnull
+        except ImportError:
+            return value
+    return value
+
 def _to_js_headers(headers: dict[str, str] | list[tuple[str, str]] | JsProxy) -> JsProxy:
     if isinstance(headers, dict):
         return js.Headers.new(list(headers.items()))

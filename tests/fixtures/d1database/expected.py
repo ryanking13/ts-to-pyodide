@@ -57,6 +57,15 @@ def _from_js_opts(js_obj: Any) -> Any:
         return v
     return _convert(js_obj.to_py())
 
+def _none_to_jsnull(value: Any) -> Any:
+    if value is None:
+        try:
+            from pyodide.ffi import jsnull
+            return jsnull
+        except ImportError:
+            return value
+    return value
+
 def _to_js_headers(headers: dict[str, str] | list[tuple[str, str]] | JsProxy) -> JsProxy:
     if isinstance(headers, dict):
         return js.Headers.new(list(headers.items()))
@@ -157,7 +166,7 @@ class D1PreparedStatement:
         setattr(self, _to_snake(key), value)
 
     def bind(self, *values: Any) -> D1PreparedStatement:
-        return D1PreparedStatement.from_js(self._binding.bind(*values))
+        return D1PreparedStatement.from_js(self._binding.bind(*[_none_to_jsnull(v) for v in values]))
 
     async def first(self, *args: Any, **kwargs: Any) -> Any:
         return _auto_to_py(_jsnull_to_none(await self._binding.first(*args, **kwargs)))
@@ -169,7 +178,10 @@ class D1PreparedStatement:
         return _from_js_opts(await self._binding.all())
 
     async def raw(self, *args: Any, **kwargs: Any) -> Any:
-        return _auto_to_py(await self._binding.raw(*args, **kwargs))
+        _a = list(args)
+        if len(_a) > 0 and isinstance(_a[0], dict):
+            _a[0] = _to_js_opts(_a[0])
+        return _auto_to_py(await self._binding.raw(*_a, **kwargs))
 
 
 class D1ExecResult(TypedDict):
