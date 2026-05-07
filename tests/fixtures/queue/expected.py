@@ -108,7 +108,7 @@ class Queue:
         return _from_js_opts(await self._binding.metrics())
 
     async def send(self, message: Any, options: QueueSendOptions | None = None) -> QueueSendResponse:
-        return _from_js_opts(await self._binding.send(message, _to_js_opts(options)))
+        return _from_js_opts(await self._binding.send(to_js(message), _to_js_opts(options)))
 
     async def send_batch(self, messages: Any, options: QueueSendBatchOptions | None = None) -> QueueSendBatchResponse:
         return _from_js_opts(await self._binding.sendBatch(to_js(messages), _to_js_opts(options)))

@@ -180,6 +180,8 @@ export function needsToJs(ir: TypeIR): boolean {
       return false;
     case "reference":
       return true;
+    case "parameterReference":
+      return true;
     case "other":
       return false;
     case "union":
