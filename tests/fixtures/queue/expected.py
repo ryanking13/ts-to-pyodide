@@ -220,7 +220,7 @@ class Message:
 
     @property
     def body(self) -> Any:
-        return self._binding.body
+        return _auto_to_py(self._binding.body)
 
     @property
     def attempts(self) -> int | float:

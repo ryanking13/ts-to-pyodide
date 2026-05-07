@@ -22,6 +22,7 @@ import {
   isVoidReturn,
   NATIVE_TYPES,
   REFERENCE_TYPE_MAP,
+  needsAutoToPy,
   needsCreateProxy,
   needsToJs,
   needsToPy,
@@ -420,12 +421,14 @@ export class Renderer {
     const isDataBag = wrapperClass ? this.dataBagNames.has(wrapperClass) : false;
     const nullable = isNullable(returns);
     const nativeToPy = this.getNativeToPy(returns);
+    const autoToPy = needsAutoToPy(returns);
     const toPy = needsToPy(returns);
 
     if (isVoidReturn(returns)) return "void";
     if (wrapperClass && !isDataBag) return nullable ? "wrapper_nullable" : "wrapper";
     if (isDataBag) return nullable ? "databag_nullable" : "databag";
     if (nativeToPy) return nullable ? "native_topy_nullable" : "native_topy";
+    if (autoToPy) return nullable ? "auto_topy_nullable" : "auto_topy";
     if (toPy) return nullable ? "topy_nullable" : "topy";
     if (nullable) return "nullable";
     return "plain";
@@ -457,6 +460,10 @@ export class Renderer {
         return `${nativeToPyFn}(_jsnull_to_none(${rawCall}))`;
       case "native_topy":
         return `${nativeToPyFn}(${rawCall})`;
+      case "auto_topy_nullable":
+        return `_auto_to_py(_jsnull_to_none(${rawCall}))`;
+      case "auto_topy":
+        return `_auto_to_py(${rawCall})`;
       case "topy_nullable":
         return `_auto_to_py(_jsnull_to_none(${rawCall}))`;
       case "topy":
@@ -635,6 +642,7 @@ export class Renderer {
 
     const isDataBag = wrapperClass ? this.dataBagNames.has(wrapperClass) : false;
     const nativeToPy = this.getNativeToPy(typeIR);
+    const autoToPy = needsAutoToPy(typeIR);
     const toPy = needsToPy(typeIR);
     let getterBody: string;
     if (wrapperClass && !isDataBag && nullable) {
@@ -655,6 +663,12 @@ export class Renderer {
         `    return ${nativeToPy}(_v) if _v is not None else None`;
     } else if (nativeToPy) {
       getterBody = `    return ${nativeToPy}(${rawExpr})`;
+    } else if (autoToPy && nullable) {
+      getterBody =
+        `    _v = _jsnull_to_none(${rawExpr})\n` +
+        `    return _auto_to_py(_v) if _v is not None else None`;
+    } else if (autoToPy) {
+      getterBody = `    return _auto_to_py(${rawExpr})`;
     } else if (toPy && nullable) {
       getterBody =
         `    _v = _jsnull_to_none(${rawExpr})\n` +
@@ -712,6 +726,7 @@ export class Renderer {
     const isDataBag = wrapperClass ? this.dataBagNames.has(wrapperClass) : false;
     const nullable = isNullable(returns);
     const nativeToPy = this.getNativeToPy(returns);
+    const autoToPy = needsAutoToPy(returns);
     const toPy = needsToPy(returns);
 
     if (isVoidReturn(returns)) {
@@ -743,6 +758,15 @@ export class Renderer {
     }
     if (nativeToPy) {
       return `    return ${nativeToPy}(${rawCall})`;
+    }
+    if (autoToPy && nullable) {
+      return (
+        `    _v = _jsnull_to_none(${rawCall})\n` +
+        `    return _auto_to_py(_v) if _v is not None else None`
+      );
+    }
+    if (autoToPy) {
+      return `    return _auto_to_py(${rawCall})`;
     }
     if (toPy && nullable) {
       return (

@@ -171,6 +171,10 @@ export function needsToPy(ir: TypeIR): boolean {
   return false;
 }
 
+export function needsAutoToPy(ir: TypeIR): boolean {
+  return ir.kind === "parameterReference";
+}
+
 export function needsToJs(ir: TypeIR): boolean {
   if (needsCreateProxy(ir)) return false;
   switch (ir.kind) {
