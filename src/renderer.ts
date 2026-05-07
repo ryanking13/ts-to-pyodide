@@ -22,6 +22,7 @@ import {
   isVoidReturn,
   NATIVE_TYPES,
   REFERENCE_TYPE_MAP,
+  needsAutoToPy,
   needsCreateProxy,
   needsToJs,
   needsToPy,
@@ -32,6 +33,7 @@ import {
 
 const PRELUDE = `\
 from __future__ import annotations
+from datetime import datetime, timezone
 from typing import Any, Literal, Never, TypedDict, overload
 import js
 from pyodide.ffi import JsBuffer, JsProxy, create_proxy, to_js
@@ -105,6 +107,14 @@ def _to_js_headers(headers: dict[str, str] | list[tuple[str, str]] | JsProxy) ->
     elif isinstance(headers, list):
         return js.Headers.new(headers)
     return headers
+
+def _to_js_date(dt: datetime | JsProxy) -> JsProxy:
+    if isinstance(dt, JsProxy):
+        return dt
+    return js.Date.new(int(dt.timestamp() * 1000))
+
+def _from_js_date(js_date: Any) -> datetime:
+    return datetime.fromtimestamp(js_date.getTime() / 1000, tz=timezone.utc)
 `;
 
 /**
@@ -180,8 +190,10 @@ export class Renderer {
   // In python, we pass it as a TypedDict not a class which is more pythonic
   private isDataBag(ir: InterfaceIR): boolean {
     if (ir.constructors && ir.constructors.length > 0) return false;
+    if (ir.jsobject) return false; // JS classes (declare class) are not data bags
     const hasMethods = ir.methods.some(
-      (m) => m.name !== "__call__" && m.name && !m.isStatic,
+      // Skip dunder methods that Pyodide might added to the interface. We don't want that behavior
+      (m) => m.name && !m.isStatic && !m.name.startsWith("__"),
     );
     return !hasMethods && ir.properties.length > 0;
   }
@@ -408,11 +420,19 @@ export class Renderer {
     const wrapperClass = resolveKnownInterface(returns, this.knownInterfaces);
     const isDataBag = wrapperClass ? this.dataBagNames.has(wrapperClass) : false;
     const nullable = isNullable(returns);
+    const nativeToPy = this.getNativeToPy(returns);
+    const autoToPy = needsAutoToPy(returns);
     const toPy = needsToPy(returns);
+
+    const arrayElem = this.resolveArrayElement(returns);
 
     if (isVoidReturn(returns)) return "void";
     if (wrapperClass && !isDataBag) return nullable ? "wrapper_nullable" : "wrapper";
     if (isDataBag) return nullable ? "databag_nullable" : "databag";
+    if (arrayElem && !arrayElem.isDataBag) return "array_wrapper";
+    if (arrayElem && arrayElem.isDataBag) return "array_databag";
+    if (nativeToPy) return nullable ? "native_topy_nullable" : "native_topy";
+    if (autoToPy) return nullable ? "auto_topy_nullable" : "auto_topy";
     if (toPy) return nullable ? "topy_nullable" : "topy";
     if (nullable) return "nullable";
     return "plain";
@@ -423,6 +443,16 @@ export class Renderer {
     if (sig && (kind === "wrapper" || kind === "wrapper_nullable")) {
       const ret = isPromise(sig.returns) ? unwrapPromise(sig.returns) : sig.returns;
       wrapperClass = resolveKnownInterface(ret, this.knownInterfaces);
+    }
+    let nativeToPyFn: string | undefined;
+    if (sig && (kind === "native_topy" || kind === "native_topy_nullable")) {
+      const ret = isPromise(sig.returns) ? unwrapPromise(sig.returns) : sig.returns;
+      nativeToPyFn = this.getNativeToPy(ret);
+    }
+    let arrayElemInfo: { className: string; isDataBag: boolean } | undefined;
+    if (sig && (kind === "array_wrapper" || kind === "array_databag")) {
+      const ret = isPromise(sig.returns) ? unwrapPromise(sig.returns) : sig.returns;
+      arrayElemInfo = this.resolveArrayElement(ret);
     }
     switch (kind) {
       case "void":
@@ -435,6 +465,18 @@ export class Renderer {
         return `_from_js_opts(_jsnull_to_none(${rawCall}))`;
       case "databag":
         return `_from_js_opts(${rawCall})`;
+      case "array_wrapper":
+        return `[${arrayElemInfo!.className}.from_js(e) for e in ${rawCall}]`;
+      case "array_databag":
+        return `[_from_js_opts(e) for e in ${rawCall}]`;
+      case "native_topy_nullable":
+        return `${nativeToPyFn}(_jsnull_to_none(${rawCall}))`;
+      case "native_topy":
+        return `${nativeToPyFn}(${rawCall})`;
+      case "auto_topy_nullable":
+        return `_auto_to_py(_jsnull_to_none(${rawCall}))`;
+      case "auto_topy":
+        return `_auto_to_py(_jsnull_to_none(${rawCall}))`;
       case "topy_nullable":
         return `_auto_to_py(_jsnull_to_none(${rawCall}))`;
       case "topy":
@@ -612,6 +654,9 @@ export class Renderer {
     const rawExpr = jsAttrAccess("self._binding", jsName);
 
     const isDataBag = wrapperClass ? this.dataBagNames.has(wrapperClass) : false;
+    const arrayElem = this.resolveArrayElement(typeIR);
+    const nativeToPy = this.getNativeToPy(typeIR);
+    const autoToPy = needsAutoToPy(typeIR);
     const toPy = needsToPy(typeIR);
     let getterBody: string;
     if (wrapperClass && !isDataBag && nullable) {
@@ -626,6 +671,22 @@ export class Renderer {
         `    return _from_js_opts(_v) if _v is not None else None`;
     } else if (isDataBag) {
       getterBody = `    return _from_js_opts(${rawExpr})`;
+    } else if (arrayElem && !arrayElem.isDataBag) {
+      getterBody = `    return [${arrayElem.className}.from_js(e) for e in ${rawExpr}]`;
+    } else if (arrayElem && arrayElem.isDataBag) {
+      getterBody = `    return [_from_js_opts(e) for e in ${rawExpr}]`;
+    } else if (nativeToPy && nullable) {
+      getterBody =
+        `    _v = _jsnull_to_none(${rawExpr})\n` +
+        `    return ${nativeToPy}(_v) if _v is not None else None`;
+    } else if (nativeToPy) {
+      getterBody = `    return ${nativeToPy}(${rawExpr})`;
+    } else if (autoToPy && nullable) {
+      getterBody =
+        `    _v = _jsnull_to_none(${rawExpr})\n` +
+        `    return _auto_to_py(_v) if _v is not None else None`;
+    } else if (autoToPy) {
+      getterBody = `    return _auto_to_py(_jsnull_to_none(${rawExpr}))`;
     } else if (toPy && nullable) {
       getterBody =
         `    _v = _jsnull_to_none(${rawExpr})\n` +
@@ -682,6 +743,8 @@ export class Renderer {
     const wrapperClass = resolveKnownInterface(returns, this.knownInterfaces);
     const isDataBag = wrapperClass ? this.dataBagNames.has(wrapperClass) : false;
     const nullable = isNullable(returns);
+    const nativeToPy = this.getNativeToPy(returns);
+    const autoToPy = needsAutoToPy(returns);
     const toPy = needsToPy(returns);
 
     if (isVoidReturn(returns)) {
@@ -704,6 +767,31 @@ export class Renderer {
     }
     if (isDataBag) {
       return `    return _from_js_opts(${rawCall})`;
+    }
+    const arrayElem = this.resolveArrayElement(returns);
+    if (arrayElem && !arrayElem.isDataBag) {
+      return `    return [${arrayElem.className}.from_js(e) for e in ${rawCall}]`;
+    }
+    if (arrayElem && arrayElem.isDataBag) {
+      return `    return [_from_js_opts(e) for e in ${rawCall}]`;
+    }
+    if (nativeToPy && nullable) {
+      return (
+        `    _v = _jsnull_to_none(${rawCall})\n` +
+        `    return ${nativeToPy}(_v) if _v is not None else None`
+      );
+    }
+    if (nativeToPy) {
+      return `    return ${nativeToPy}(${rawCall})`;
+    }
+    if (autoToPy && nullable) {
+      return (
+        `    _v = _jsnull_to_none(${rawCall})\n` +
+        `    return _auto_to_py(_v) if _v is not None else None`
+      );
+    }
+    if (autoToPy) {
+      return `    return _auto_to_py(_jsnull_to_none(${rawCall}))`;
     }
     if (toPy && nullable) {
       return (
@@ -739,6 +827,9 @@ export class Renderer {
       if (param.isOptional) {
         return `to_js(${name}) if ${name} is not None else None`;
       }
+      if (param.type.kind === "parameterReference") {
+        return `to_js(_none_to_jsnull(${name}))`;
+      }
       return `to_js(${name})`;
     }
     return name;
@@ -757,6 +848,31 @@ export class Renderer {
   private getNativeToJs(ir: TypeIR): string | undefined {
     if (ir.kind === "reference") {
       return NATIVE_TYPES[ir.name]?.toJs;
+    }
+    return undefined;
+  }
+
+  private resolveArrayElement(ir: TypeIR): { className: string; isDataBag: boolean } | undefined {
+    let inner = ir;
+    if (inner.kind === "operator") inner = inner.type;
+    if (inner.kind !== "array") return undefined;
+    const elemType = inner.type;
+    const className = resolveKnownInterface(elemType, this.knownInterfaces);
+    if (!className) return undefined;
+    return { className, isDataBag: this.dataBagNames.has(className) };
+  }
+
+  private getNativeToPy(ir: TypeIR): string | undefined {
+    if (ir.kind === "reference") {
+      return NATIVE_TYPES[ir.name]?.toPy;
+    }
+    if (ir.kind === "union") {
+      const nonNone = ir.types.filter(
+        (t) => !(t.kind === "simple" && t.text === "None"),
+      );
+      if (nonNone.length === 1) {
+        return this.getNativeToPy(nonNone[0]);
+      }
     }
     return undefined;
   }

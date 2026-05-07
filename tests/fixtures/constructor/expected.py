@@ -1,4 +1,5 @@
 from __future__ import annotations
+from datetime import datetime, timezone
 from typing import Any, Literal, Never, TypedDict, overload
 import js
 from pyodide.ffi import JsBuffer, JsProxy, create_proxy, to_js
@@ -72,6 +73,14 @@ def _to_js_headers(headers: dict[str, str] | list[tuple[str, str]] | JsProxy) ->
     elif isinstance(headers, list):
         return js.Headers.new(headers)
     return headers
+
+def _to_js_date(dt: datetime | JsProxy) -> JsProxy:
+    if isinstance(dt, JsProxy):
+        return dt
+    return js.Date.new(int(dt.timestamp() * 1000))
+
+def _from_js_date(js_date: Any) -> datetime:
+    return datetime.fromtimestamp(js_date.getTime() / 1000, tz=timezone.utc)
 
 class Headers:
     _binding: Any

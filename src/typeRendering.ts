@@ -15,6 +15,11 @@ export const NATIVE_TYPES: Record<string, NativeTypeInfo> = {
     pyType: "dict[str, str] | list[tuple[str, str]] | JsProxy",
     toJs: "_to_js_headers",
   },
+  Date: {
+    pyType: "datetime",
+    toJs: "_to_js_date",
+    toPy: "_from_js_date",
+  },
 };
 
 export const REFERENCE_TYPE_MAP: Record<string, string> = {
@@ -166,6 +171,10 @@ export function needsToPy(ir: TypeIR): boolean {
   return false;
 }
 
+export function needsAutoToPy(ir: TypeIR): boolean {
+  return ir.kind === "parameterReference";
+}
+
 export function needsToJs(ir: TypeIR): boolean {
   if (needsCreateProxy(ir)) return false;
   switch (ir.kind) {
@@ -174,6 +183,8 @@ export function needsToJs(ir: TypeIR): boolean {
     case "number":
       return false;
     case "reference":
+      return true;
+    case "parameterReference":
       return true;
     case "other":
       return false;
