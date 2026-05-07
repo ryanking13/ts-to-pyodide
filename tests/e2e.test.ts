@@ -148,6 +148,26 @@ describe("e2e: KV namespace (.d.ts → IR → renderFile)", () => {
   });
 });
 
+describe("e2e: D1 database (.d.ts → IR → renderFile)", () => {
+  it("d1database: declare class D1Database/Session/PreparedStatement, TypedDict results, sub-binding wrapping, overloads", () => {
+    const inputDts = readFileSync(
+      resolve(FIXTURES_DIR, "d1database", "input.d.ts"),
+      "utf-8",
+    );
+    const expectedPy = readFileSync(
+      resolve(FIXTURES_DIR, "d1database", "expected.py"),
+      "utf-8",
+    );
+
+    const project = makeProject();
+    project.createSourceFile("/fixture.d.ts", inputDts);
+    const result = convertToIR([project.getSourceFileOrThrow("/fixture.d.ts")]);
+
+    const output = renderer.renderFile(result.topLevels.ifaces);
+    assert.strictEqual(output, expectedPy);
+  });
+});
+
 describe("e2e: options as TypedDict (.d.ts → IR → renderFile)", () => {
   it("kwparams: options bag rendered as TypedDict with snake_case keys", () => {
     const inputDts = readFileSync(

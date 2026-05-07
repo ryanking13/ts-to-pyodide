@@ -19,7 +19,7 @@ export const FIXTURE_NAMES = [
   "math_params",
   "async_delete",
   "readonly_properties",
-  "d1database",
+
   "hyperdrive",
   "overloads",
   "generic_method",

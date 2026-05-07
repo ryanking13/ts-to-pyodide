@@ -598,7 +598,29 @@ export class Converter {
     if (Node.isQualifiedName(ident)) {
       return ANY_IR;
     }
-    const { name, kind } = classifyIdentifier(ident);
+    const classified = classifyIdentifier(ident);
+    const { name, kind } = classified;
+
+    if (kind === "typeAlias") {
+      const aliasTypeNode = classified.decl.getTypeNode()!;
+      // Only inline simple type aliases (primitives, literal types, unions of
+      // primitives/literals). Complex aliases (intersections, object literals)
+      // should keep their named reference so they get processed as interfaces.
+      if (
+        Node.isLiteralTypeNode(aliasTypeNode) ||
+        aliasTypeNode.getText() in TYPE_TEXT_MAP ||
+        aliasTypeNode.getText() === "number" ||
+        (Node.isUnionTypeNode(aliasTypeNode) &&
+          aliasTypeNode.getTypeNodes().every(
+            (t) =>
+              Node.isLiteralTypeNode(t) ||
+              t.getText() in TYPE_TEXT_MAP ||
+              t.getText() === "number",
+          ))
+      ) {
+        return this.typeToIR(aliasTypeNode);
+      }
+    }
 
     if (kind === "interfaces") {
       const interfaceDefs = (ident as Identifier)

@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import Any, Literal, TypedDict, overload
+from typing import Any, Literal, Never, TypedDict, overload
 import js
 from pyodide.ffi import JsBuffer, JsProxy, create_proxy, to_js
 

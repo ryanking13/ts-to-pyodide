@@ -399,7 +399,7 @@ describe("callable param conversion", () => {
 describe("renderFile", () => {
   it("includes prelude with pyodide imports", () => {
     const result = renderer.renderFile([irInterface("X_iface")]);
-    assert.ok(result.includes("from typing import Any, Literal, TypedDict, overload"));
+    assert.ok(result.includes("from typing import Any, Literal, Never, TypedDict, overload"));
     assert.ok(result.includes("from pyodide.ffi import JsBuffer, JsProxy, create_proxy, to_js"));
     assert.ok(result.includes("def _jsnull_to_none"));
   });
