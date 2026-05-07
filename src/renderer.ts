@@ -476,7 +476,7 @@ export class Renderer {
       case "auto_topy_nullable":
         return `_auto_to_py(_jsnull_to_none(${rawCall}))`;
       case "auto_topy":
-        return `_auto_to_py(${rawCall})`;
+        return `_auto_to_py(_jsnull_to_none(${rawCall}))`;
       case "topy_nullable":
         return `_auto_to_py(_jsnull_to_none(${rawCall}))`;
       case "topy":
@@ -686,7 +686,7 @@ export class Renderer {
         `    _v = _jsnull_to_none(${rawExpr})\n` +
         `    return _auto_to_py(_v) if _v is not None else None`;
     } else if (autoToPy) {
-      getterBody = `    return _auto_to_py(${rawExpr})`;
+      getterBody = `    return _auto_to_py(_jsnull_to_none(${rawExpr}))`;
     } else if (toPy && nullable) {
       getterBody =
         `    _v = _jsnull_to_none(${rawExpr})\n` +
@@ -791,7 +791,7 @@ export class Renderer {
       );
     }
     if (autoToPy) {
-      return `    return _auto_to_py(${rawCall})`;
+      return `    return _auto_to_py(_jsnull_to_none(${rawCall}))`;
     }
     if (toPy && nullable) {
       return (

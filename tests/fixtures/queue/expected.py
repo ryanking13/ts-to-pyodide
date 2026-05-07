@@ -220,7 +220,7 @@ class Message:
 
     @property
     def body(self) -> Any:
-        return _auto_to_py(self._binding.body)
+        return _auto_to_py(_jsnull_to_none(self._binding.body))
 
     @property
     def attempts(self) -> int | float:
