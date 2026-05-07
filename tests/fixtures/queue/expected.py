@@ -82,11 +82,11 @@ def _to_js_date(dt: datetime | JsProxy) -> JsProxy:
 def _from_js_date(js_date: Any) -> datetime:
     return datetime.fromtimestamp(js_date.getTime() / 1000, tz=timezone.utc)
 
-class D1Database:
+class Queue:
     _binding: Any
 
     @classmethod
-    def from_js(cls, js_obj: JsProxy) -> D1Database:
+    def from_js(cls, js_obj: JsProxy) -> Queue:
         instance = object.__new__(cls)
         instance._binding = js_obj
         return instance
@@ -104,27 +104,21 @@ class D1Database:
     def __setitem__(self, key: str, value: Any) -> None:
         setattr(self, _to_snake(key), value)
 
-    def prepare(self, query: str) -> D1PreparedStatement:
-        return D1PreparedStatement.from_js(self._binding.prepare(query))
+    async def metrics(self) -> QueueMetrics:
+        return _from_js_opts(await self._binding.metrics())
 
-    async def batch(self, statements: list[D1PreparedStatement]) -> list[D1Result]:
-        return await self._binding.batch(to_js(statements))
+    async def send(self, message: Any, options: QueueSendOptions | None = None) -> QueueSendResponse:
+        return _from_js_opts(await self._binding.send(message, _to_js_opts(options)))
 
-    async def exec(self, query: str) -> D1ExecResult:
-        return _from_js_opts(await self._binding.exec(query))
-
-    def with_session(self, constraint_or_bookmark: str | Literal["first-primary", "first-unconstrained"] | None = None) -> D1DatabaseSession:
-        return D1DatabaseSession.from_js(self._binding.withSession(to_js(constraint_or_bookmark) if constraint_or_bookmark is not None else None))
-
-    async def dump(self) -> JsBuffer:
-        return await self._binding.dump()
+    async def send_batch(self, messages: Any, options: QueueSendBatchOptions | None = None) -> QueueSendBatchResponse:
+        return _from_js_opts(await self._binding.sendBatch(to_js(messages), _to_js_opts(options)))
 
 
-class D1DatabaseSession:
+class MessageBatch:
     _binding: Any
 
     @classmethod
-    def from_js(cls, js_obj: JsProxy) -> D1DatabaseSession:
+    def from_js(cls, js_obj: JsProxy) -> MessageBatch:
         instance = object.__new__(cls)
         instance._binding = js_obj
         return instance
@@ -142,21 +136,63 @@ class D1DatabaseSession:
     def __setitem__(self, key: str, value: Any) -> None:
         setattr(self, _to_snake(key), value)
 
-    def prepare(self, query: str) -> D1PreparedStatement:
-        return D1PreparedStatement.from_js(self._binding.prepare(query))
+    @property
+    def messages(self) -> list[Message]:
+        return self._binding.messages
 
-    async def batch(self, statements: list[D1PreparedStatement]) -> list[D1Result]:
-        return await self._binding.batch(to_js(statements))
+    @property
+    def queue(self) -> str:
+        return self._binding.queue
 
-    def get_bookmark(self) -> str | None:
-        return _jsnull_to_none(self._binding.getBookmark())
+    @property
+    def metadata(self) -> MessageBatchMetadata:
+        return _from_js_opts(self._binding.metadata)
+
+    def retry_all(self, options: QueueRetryOptions | None = None) -> None:
+        self._binding.retryAll(_to_js_opts(options))
+
+    def ack_all(self) -> None:
+        self._binding.ackAll()
 
 
-class D1PreparedStatement:
+class QueueMetrics(TypedDict):
+    backlog_count: int | float
+    backlog_bytes: int | float
+    oldest_message_timestamp: datetime | None
+
+
+class QueueSendOptions(TypedDict, total=False):
+    content_type: Literal["text", "bytes", "json", "v8"]
+    delay_seconds: int | float
+
+
+class QueueSendResponse(TypedDict):
+    metadata: QueueSendMetadata
+
+
+class MessageSendRequest(TypedDict):
+    body: Any
+    content_type: Literal["text", "bytes", "json", "v8"] | None
+    delay_seconds: int | float | None
+
+
+class QueueSendBatchOptions(TypedDict, total=False):
+    delay_seconds: int | float
+
+
+class QueueSendBatchResponse(TypedDict):
+    metadata: QueueSendBatchMetadata
+
+
+class QueueRetryOptions(TypedDict, total=False):
+    delay_seconds: int | float
+
+
+class Message:
     _binding: Any
 
     @classmethod
-    def from_js(cls, js_obj: JsProxy) -> D1PreparedStatement:
+    def from_js(cls, js_obj: JsProxy) -> Message:
         instance = object.__new__(cls)
         instance._binding = js_obj
         return instance
@@ -174,51 +210,54 @@ class D1PreparedStatement:
     def __setitem__(self, key: str, value: Any) -> None:
         setattr(self, _to_snake(key), value)
 
-    def bind(self, *values: Any) -> D1PreparedStatement:
-        return D1PreparedStatement.from_js(self._binding.bind(*[_none_to_jsnull(v) for v in values]))
+    @property
+    def id(self) -> str:
+        return self._binding.id
 
-    async def first(self, *args: Any, **kwargs: Any) -> Any:
-        return _auto_to_py(_jsnull_to_none(await self._binding.first(*args, **kwargs)))
+    @property
+    def timestamp(self) -> datetime:
+        return _from_js_date(self._binding.timestamp)
 
-    async def run(self) -> D1Result:
-        return _from_js_opts(await self._binding.run())
+    @property
+    def body(self) -> Any:
+        return self._binding.body
 
-    async def all(self) -> D1Result:
-        return _from_js_opts(await self._binding.all())
+    @property
+    def attempts(self) -> int | float:
+        return self._binding.attempts
 
-    async def raw(self, *args: Any, **kwargs: Any) -> Any:
-        _a = list(args)
-        if len(_a) > 0 and isinstance(_a[0], dict):
-            _a[0] = _to_js_opts(_a[0])
-        return _auto_to_py(await self._binding.raw(*_a, **kwargs))
+    def retry(self, options: QueueRetryOptions | None = None) -> None:
+        self._binding.retry(_to_js_opts(options))
 
-
-class D1ExecResult(TypedDict):
-    count: int | float
-    duration: int | float
-
-
-class D1Response(TypedDict):
-    success: Literal[True]
-    meta: Any
-    error: Never | None
+    def ack(self) -> None:
+        self._binding.ack()
 
 
-class D1Meta(TypedDict):
-    duration: int | float
-    size_after: int | float
-    rows_read: int | float
-    rows_written: int | float
-    last_row_id: int | float
-    changed_db: bool
-    changes: int | float
-    served_by_region: str | None
-    served_by_colo: str | None
-    served_by_primary: bool | None
-    timings: Any | None
-    total_attempts: int | float | None
-    sql_duration_ms: int | float
+class MessageBatchMetadata(TypedDict):
+    metrics: MessageBatchMetrics
 
 
-class D1Result(TypedDict):
-    results: list[Any]
+class QueueSendMetadata(TypedDict):
+    metrics: QueueSendMetrics
+
+
+class QueueSendBatchMetadata(TypedDict):
+    metrics: QueueSendBatchMetrics
+
+
+class MessageBatchMetrics(TypedDict):
+    backlog_count: int | float
+    backlog_bytes: int | float
+    oldest_message_timestamp: datetime | None
+
+
+class QueueSendMetrics(TypedDict):
+    backlog_count: int | float
+    backlog_bytes: int | float
+    oldest_message_timestamp: datetime | None
+
+
+class QueueSendBatchMetrics(TypedDict):
+    backlog_count: int | float
+    backlog_bytes: int | float
+    oldest_message_timestamp: datetime | None

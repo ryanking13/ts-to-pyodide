@@ -25,7 +25,9 @@ function topologicalSortClasses(
     for (const { name } of cls.bases) {
       const superClass = nameToCls.get(name);
       if (!superClass) {
-        throw new Error(`Unknown super: ${cls.name} < ${name}`);
+        // Ignore unknown super classes
+        // Superclasses coming from Web APIs etc. are not defined in the input
+        continue;
       }
       visit(superClass);
     }

@@ -15,6 +15,11 @@ export const NATIVE_TYPES: Record<string, NativeTypeInfo> = {
     pyType: "dict[str, str] | list[tuple[str, str]] | JsProxy",
     toJs: "_to_js_headers",
   },
+  Date: {
+    pyType: "datetime",
+    toJs: "_to_js_date",
+    toPy: "_from_js_date",
+  },
 };
 
 export const REFERENCE_TYPE_MAP: Record<string, string> = {
