@@ -87,11 +87,11 @@ def _to_js_date(dt: datetime | JsProxy) -> JsProxy:
 def _from_js_date(js_date: Any) -> datetime:
     return datetime.fromtimestamp(js_date.getTime() / 1000, tz=timezone.utc)
 
-class KVNamespace:
+class Vectorize:
     _binding: Any
 
     @classmethod
-    def from_js(cls, js_obj: JsProxy) -> KVNamespace:
+    def from_js(cls, js_obj: JsProxy) -> Vectorize:
         instance = object.__new__(cls)
         instance._binding = js_obj
         return instance
@@ -109,73 +109,62 @@ class KVNamespace:
     def __setitem__(self, key: str, value: Any) -> None:
         setattr(self, _to_snake(key), value)
 
-    async def get(self, *args: Any, **kwargs: Any) -> Any:
-        _a = list(args)
-        if len(_a) > 0:
-            _a[0] = to_js(_a[0])
-        if len(_a) > 1 and isinstance(_a[1], dict):
-            _a[1] = _to_js_opts(_a[1])
-        _r = await self._binding.get(*_a, **kwargs)
-        if isinstance(args[0], str):
-            return _auto_to_py(_jsnull_to_none(_r))
-        elif isinstance(args[0], list):
-            return _auto_to_py(_r)
-        return _r
+    async def describe(self) -> VectorizeIndexInfo:
+        return _from_js_opts(await self._binding.describe())
 
-    async def list(self, options: KVNamespaceListOptions | None = None) -> KVNamespaceListResult:
-        return _from_js_opts(await self._binding.list(_to_js_opts(options)))
+    async def query(self, vector: Any | list[int | float], options: VectorizeQueryOptions | None = None) -> VectorizeMatches:
+        return _from_js_opts(await self._binding.query(to_js(vector), _to_js_opts(options)))
 
-    async def put(self, key: str, value: str | JsBuffer | Any, options: KVNamespacePutOptions | None = None) -> None:
-        await self._binding.put(key, to_js(value), _to_js_opts(options))
+    async def query_by_id(self, vector_id: str, options: VectorizeQueryOptions | None = None) -> VectorizeMatches:
+        return _from_js_opts(await self._binding.queryById(vector_id, _to_js_opts(options)))
 
-    async def get_with_metadata(self, *args: Any, **kwargs: Any) -> Any:
-        _a = list(args)
-        if len(_a) > 0:
-            _a[0] = to_js(_a[0])
-        if len(_a) > 1 and isinstance(_a[1], dict):
-            _a[1] = _to_js_opts(_a[1])
-        _r = await self._binding.getWithMetadata(*_a, **kwargs)
-        if isinstance(args[0], str):
-            return _from_js_opts(_r)
-        elif isinstance(args[0], list):
-            return _auto_to_py(_r)
-        return _r
+    async def insert(self, vectors: list[VectorizeVector]) -> VectorizeAsyncMutation:
+        return _from_js_opts(await self._binding.insert(_to_js_opts(vectors)))
 
-    async def delete(self, key: str) -> None:
-        await self._binding.delete(key)
+    async def upsert(self, vectors: list[VectorizeVector]) -> VectorizeAsyncMutation:
+        return _from_js_opts(await self._binding.upsert(_to_js_opts(vectors)))
+
+    async def delete_by_ids(self, ids: list[str]) -> VectorizeAsyncMutation:
+        return _from_js_opts(await self._binding.deleteByIds(to_js(ids)))
+
+    async def get_by_ids(self, ids: list[str]) -> list[VectorizeVector]:
+        return [_from_js_opts(e) for e in await self._binding.getByIds(to_js(ids))]
 
 
-class KVNamespaceGetOptions(TypedDict):
-    type_: Any
-    cache_ttl: int | float | None
+class VectorizeIndexInfo(TypedDict):
+    vector_count: int | float
+    dimensions: int | float
+    processed_up_to_datetime: int | float
+    processed_up_to_mutation: int | float
 
 
-class KVNamespaceListOptions(TypedDict, total=False):
-    limit: int | float
-    prefix: str | None
-    cursor: str | None
+class VectorizeQueryOptions(TypedDict, total=False):
+    top_k: int | float
+    namespace: str
+    return_values: bool
+    return_metadata: bool | Literal["all", "indexed", "none"] | None
+    filter: dict[str, Any]
 
 
-class KVNamespacePutOptions(TypedDict, total=False):
-    expiration: int | float
-    expiration_ttl: int | float
-    metadata: Any | None
+class VectorizeMatches(TypedDict):
+    matches: list[VectorizeMatch]
+    count: int | float
 
 
-class KVNamespaceGetWithMetadataResult(TypedDict):
-    value: Any | None
-    metadata: Any | None
-    cache_status: str | None
+class VectorizeVector(TypedDict):
+    id: str
+    values: Any | list[int | float]
+    namespace: str | None
+    metadata: dict[str, Any] | None
 
 
-class KVNamespaceListKey(TypedDict):
-    name: str
-    expiration: int | float | None
-    metadata: Any | None
+class VectorizeAsyncMutation(TypedDict):
+    mutation_id: str
 
 
-class KVNamespaceListResult(TypedDict):
-    list_complete: bool
-    keys: list[KVNamespaceListKey]
-    cursor: str | None
-    cache_status: str | None
+class VectorizeMatch(TypedDict):
+    id: str
+    values: Any | list[int | float] | None
+    namespace: str | None
+    metadata: dict[str, Any] | None
+    score: int | float
