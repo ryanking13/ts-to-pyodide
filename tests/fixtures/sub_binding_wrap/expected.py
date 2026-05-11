@@ -2,7 +2,12 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Any, Literal, Never, TypedDict, overload
 import js
-from pyodide.ffi import JsBuffer, JsProxy, create_proxy, to_js
+from pyodide.ffi import JsBuffer, JsProxy, create_proxy, to_js as _raw_to_js
+
+def to_js(obj: Any, **kwargs: Any) -> Any:
+    if "dict_converter" not in kwargs:
+        kwargs["dict_converter"] = js.Object.fromEntries
+    return _raw_to_js(obj, **kwargs)
 
 def _jsnull_to_none(value: Any) -> Any:
     try:
