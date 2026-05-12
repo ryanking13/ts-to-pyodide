@@ -205,10 +205,13 @@ class D1Meta(TypedDict):
     served_by_region: str | None
     served_by_colo: str | None
     served_by_primary: bool | None
-    timings: Any | None
+    timings: D1MetaTimings | None
     total_attempts: int | float | None
-    sql_duration_ms: int | float
 
 
 class D1Result(TypedDict):
     results: list[Any]
+
+
+class D1MetaTimings(TypedDict):
+    sql_duration_ms: int | float

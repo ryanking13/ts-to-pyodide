@@ -1,7 +1,5 @@
 // When updating this list (e.g. updated supported Python version),
 // run `python -c "import keyword; print('\n'.join(sorted(keyword.kwlist)))"`
-// and
-// run `python -c "import keyword; print('\n'.join(sorted(keyword.softkwlist)))"`
 const PYTHON_KEYWORDS = new Set([
   "False", "None", "True",
   "and", "as", "assert", "async", "await",
@@ -22,13 +20,8 @@ const PYTHON_KEYWORDS = new Set([
   "yield",
 ]);
 
-const PYTHON_SOFT_KEYWORDS = new Set([
-  "_", "case", "match", "type",
-]);
-
 export const PYTHON_RESERVED = new Set([
   ...PYTHON_KEYWORDS,
-  ...PYTHON_SOFT_KEYWORDS,
 ]);
 
 export function camelToSnake(name: string): string {
