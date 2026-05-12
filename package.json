@@ -6,14 +6,13 @@
   "type": "module",
   "bin": "dist/main.js",
   "files": [
-    "dist",
-    "src/prelude.py"
+    "dist"
   ],
   "scripts": {
     "test": "node --test --import=tsx 'tests/**/*.test.ts'",
     "test:integration": "INTEGRATION_TEST=1 node --test --import=tsx tests/integration.test.ts",
     "run": "tsx src/main.ts",
-    "build": "npx tsc",
+    "build": "npx tsc && cp src/prelude.py dist/prelude.py",
     "check": "npx tsc -p tsconfig-check.json"
   },
   "dependencies": {
