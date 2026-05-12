@@ -70,6 +70,18 @@ class BaseAiImageClassification:
     def __getattr__(self, name: str) -> Any:
         return getattr(self._binding, name)
 
+    def __getitem__(self, key: str) -> Any:
+        return getattr(self, key)
+
+    def __setitem__(self, key: str, value: Any) -> None:
+        setattr(self, key, value)
+
+    def __eq__(self, other: Any) -> bool:
+        return isinstance(other, self.__class__) and self._binding == other._binding
+
+    def __hash__(self) -> int:
+        return id(self._binding)
+
     @property
     def inputs(self) -> AiImageClassificationInput:
         return _auto_to_py(self._binding.inputs)
@@ -102,6 +114,18 @@ class BaseAiImageToText:
 
     def __getattr__(self, name: str) -> Any:
         return getattr(self._binding, name)
+
+    def __getitem__(self, key: str) -> Any:
+        return getattr(self, key)
+
+    def __setitem__(self, key: str, value: Any) -> None:
+        setattr(self, key, value)
+
+    def __eq__(self, other: Any) -> bool:
+        return isinstance(other, self.__class__) and self._binding == other._binding
+
+    def __hash__(self) -> int:
+        return id(self._binding)
 
     @property
     def inputs(self) -> AiImageToTextInput:
@@ -136,6 +160,18 @@ class BaseAiImageTextToText:
     def __getattr__(self, name: str) -> Any:
         return getattr(self._binding, name)
 
+    def __getitem__(self, key: str) -> Any:
+        return getattr(self, key)
+
+    def __setitem__(self, key: str, value: Any) -> None:
+        setattr(self, key, value)
+
+    def __eq__(self, other: Any) -> bool:
+        return isinstance(other, self.__class__) and self._binding == other._binding
+
+    def __hash__(self) -> int:
+        return id(self._binding)
+
     @property
     def inputs(self) -> AiImageTextToTextInput:
         return _auto_to_py(self._binding.inputs)
@@ -168,6 +204,18 @@ class BaseAiMultimodalEmbeddings:
 
     def __getattr__(self, name: str) -> Any:
         return getattr(self._binding, name)
+
+    def __getitem__(self, key: str) -> Any:
+        return getattr(self, key)
+
+    def __setitem__(self, key: str, value: Any) -> None:
+        setattr(self, key, value)
+
+    def __eq__(self, other: Any) -> bool:
+        return isinstance(other, self.__class__) and self._binding == other._binding
+
+    def __hash__(self) -> int:
+        return id(self._binding)
 
     @property
     def inputs(self) -> AiImageTextToTextInput:
@@ -202,6 +250,18 @@ class BaseAiObjectDetection:
     def __getattr__(self, name: str) -> Any:
         return getattr(self._binding, name)
 
+    def __getitem__(self, key: str) -> Any:
+        return getattr(self, key)
+
+    def __setitem__(self, key: str, value: Any) -> None:
+        setattr(self, key, value)
+
+    def __eq__(self, other: Any) -> bool:
+        return isinstance(other, self.__class__) and self._binding == other._binding
+
+    def __hash__(self) -> int:
+        return id(self._binding)
+
     @property
     def inputs(self) -> AiObjectDetectionInput:
         return _auto_to_py(self._binding.inputs)
@@ -234,6 +294,18 @@ class BaseAiSentenceSimilarity:
 
     def __getattr__(self, name: str) -> Any:
         return getattr(self._binding, name)
+
+    def __getitem__(self, key: str) -> Any:
+        return getattr(self, key)
+
+    def __setitem__(self, key: str, value: Any) -> None:
+        setattr(self, key, value)
+
+    def __eq__(self, other: Any) -> bool:
+        return isinstance(other, self.__class__) and self._binding == other._binding
+
+    def __hash__(self) -> int:
+        return id(self._binding)
 
     @property
     def inputs(self) -> AiSentenceSimilarityInput:
@@ -268,6 +340,18 @@ class BaseAiAutomaticSpeechRecognition:
     def __getattr__(self, name: str) -> Any:
         return getattr(self._binding, name)
 
+    def __getitem__(self, key: str) -> Any:
+        return getattr(self, key)
+
+    def __setitem__(self, key: str, value: Any) -> None:
+        setattr(self, key, value)
+
+    def __eq__(self, other: Any) -> bool:
+        return isinstance(other, self.__class__) and self._binding == other._binding
+
+    def __hash__(self) -> int:
+        return id(self._binding)
+
     @property
     def inputs(self) -> AiAutomaticSpeechRecognitionInput:
         return _auto_to_py(self._binding.inputs)
@@ -300,6 +384,18 @@ class BaseAiSummarization:
 
     def __getattr__(self, name: str) -> Any:
         return getattr(self._binding, name)
+
+    def __getitem__(self, key: str) -> Any:
+        return getattr(self, key)
+
+    def __setitem__(self, key: str, value: Any) -> None:
+        setattr(self, key, value)
+
+    def __eq__(self, other: Any) -> bool:
+        return isinstance(other, self.__class__) and self._binding == other._binding
+
+    def __hash__(self) -> int:
+        return id(self._binding)
 
     @property
     def inputs(self) -> AiSummarizationInput:
@@ -334,6 +430,18 @@ class BaseAiTextClassification:
     def __getattr__(self, name: str) -> Any:
         return getattr(self._binding, name)
 
+    def __getitem__(self, key: str) -> Any:
+        return getattr(self, key)
+
+    def __setitem__(self, key: str, value: Any) -> None:
+        setattr(self, key, value)
+
+    def __eq__(self, other: Any) -> bool:
+        return isinstance(other, self.__class__) and self._binding == other._binding
+
+    def __hash__(self) -> int:
+        return id(self._binding)
+
     @property
     def inputs(self) -> AiTextClassificationInput:
         return _auto_to_py(self._binding.inputs)
@@ -366,6 +474,18 @@ class BaseAiTextEmbeddings:
 
     def __getattr__(self, name: str) -> Any:
         return getattr(self._binding, name)
+
+    def __getitem__(self, key: str) -> Any:
+        return getattr(self, key)
+
+    def __setitem__(self, key: str, value: Any) -> None:
+        setattr(self, key, value)
+
+    def __eq__(self, other: Any) -> bool:
+        return isinstance(other, self.__class__) and self._binding == other._binding
+
+    def __hash__(self) -> int:
+        return id(self._binding)
 
     @property
     def inputs(self) -> AiTextEmbeddingsInput:
@@ -400,6 +520,18 @@ class BaseAiTextGeneration:
     def __getattr__(self, name: str) -> Any:
         return getattr(self._binding, name)
 
+    def __getitem__(self, key: str) -> Any:
+        return getattr(self, key)
+
+    def __setitem__(self, key: str, value: Any) -> None:
+        setattr(self, key, value)
+
+    def __eq__(self, other: Any) -> bool:
+        return isinstance(other, self.__class__) and self._binding == other._binding
+
+    def __hash__(self) -> int:
+        return id(self._binding)
+
     @property
     def inputs(self) -> AiTextGenerationInput:
         return AiTextGenerationInput.from_js(self._binding.inputs)
@@ -432,6 +564,18 @@ class BaseAiTextToSpeech:
 
     def __getattr__(self, name: str) -> Any:
         return getattr(self._binding, name)
+
+    def __getitem__(self, key: str) -> Any:
+        return getattr(self, key)
+
+    def __setitem__(self, key: str, value: Any) -> None:
+        setattr(self, key, value)
+
+    def __eq__(self, other: Any) -> bool:
+        return isinstance(other, self.__class__) and self._binding == other._binding
+
+    def __hash__(self) -> int:
+        return id(self._binding)
 
     @property
     def inputs(self) -> AiTextToSpeechInput:
@@ -466,6 +610,18 @@ class BaseAiTextToImage:
     def __getattr__(self, name: str) -> Any:
         return getattr(self._binding, name)
 
+    def __getitem__(self, key: str) -> Any:
+        return getattr(self, key)
+
+    def __setitem__(self, key: str, value: Any) -> None:
+        setattr(self, key, value)
+
+    def __eq__(self, other: Any) -> bool:
+        return isinstance(other, self.__class__) and self._binding == other._binding
+
+    def __hash__(self) -> int:
+        return id(self._binding)
+
     @property
     def inputs(self) -> AiTextToImageInput:
         return _auto_to_py(self._binding.inputs)
@@ -499,6 +655,18 @@ class BaseAiTranslation:
     def __getattr__(self, name: str) -> Any:
         return getattr(self._binding, name)
 
+    def __getitem__(self, key: str) -> Any:
+        return getattr(self, key)
+
+    def __setitem__(self, key: str, value: Any) -> None:
+        setattr(self, key, value)
+
+    def __eq__(self, other: Any) -> bool:
+        return isinstance(other, self.__class__) and self._binding == other._binding
+
+    def __hash__(self) -> int:
+        return id(self._binding)
+
     @property
     def inputs(self) -> AiTranslationInput:
         return _auto_to_py(self._binding.inputs)
@@ -531,6 +699,18 @@ class Ai:
 
     def __getattr__(self, name: str) -> Any:
         return getattr(self._binding, name)
+
+    def __getitem__(self, key: str) -> Any:
+        return getattr(self, key)
+
+    def __setitem__(self, key: str, value: Any) -> None:
+        setattr(self, key, value)
+
+    def __eq__(self, other: Any) -> bool:
+        return isinstance(other, self.__class__) and self._binding == other._binding
+
+    def __hash__(self) -> int:
+        return id(self._binding)
 
     @property
     def ai_gateway_log_id(self) -> str | None:
@@ -592,6 +772,18 @@ class ToMarkdownService:
     def __getattr__(self, name: str) -> Any:
         return getattr(self._binding, name)
 
+    def __getitem__(self, key: str) -> Any:
+        return getattr(self, key)
+
+    def __setitem__(self, key: str, value: Any) -> None:
+        setattr(self, key, value)
+
+    def __eq__(self, other: Any) -> bool:
+        return isinstance(other, self.__class__) and self._binding == other._binding
+
+    def __hash__(self) -> int:
+        return id(self._binding)
+
     async def transform(self, *args: Any, **kwargs: Any) -> Any:
         _a = list(args)
         if len(_a) > 0:
@@ -624,6 +816,18 @@ class AiModels:
 
     def __getattr__(self, name: str) -> Any:
         return getattr(self._binding, name)
+
+    def __getitem__(self, key: str) -> Any:
+        return getattr(self, key)
+
+    def __setitem__(self, key: str, value: Any) -> None:
+        setattr(self, key, value)
+
+    def __eq__(self, other: Any) -> bool:
+        return isinstance(other, self.__class__) and self._binding == other._binding
+
+    def __hash__(self) -> int:
+        return id(self._binding)
 
 
 class AiImageClassificationInput(TypedDict):
@@ -728,6 +932,18 @@ class AiTextGenerationInput:
 
     def __getattr__(self, name: str) -> Any:
         return getattr(self._binding, name)
+
+    def __getitem__(self, key: str) -> Any:
+        return getattr(self, key)
+
+    def __setitem__(self, key: str, value: Any) -> None:
+        setattr(self, key, value)
+
+    def __eq__(self, other: Any) -> bool:
+        return isinstance(other, self.__class__) and self._binding == other._binding
+
+    def __hash__(self) -> int:
+        return id(self._binding)
 
     @property
     def prompt(self) -> str | None:
@@ -973,6 +1189,18 @@ class AiTextGenerationResponseFormat:
     def __getattr__(self, name: str) -> Any:
         return getattr(self._binding, name)
 
+    def __getitem__(self, key: str) -> Any:
+        return getattr(self, key)
+
+    def __setitem__(self, key: str, value: Any) -> None:
+        setattr(self, key, value)
+
+    def __eq__(self, other: Any) -> bool:
+        return isinstance(other, self.__class__) and self._binding == other._binding
+
+    def __hash__(self) -> int:
+        return id(self._binding)
+
     @property
     def type_(self) -> str:
         return getattr(self._binding, "type")
@@ -1005,6 +1233,18 @@ class AiTextGenerationToolInput:
 
     def __getattr__(self, name: str) -> Any:
         return getattr(self._binding, name)
+
+    def __getitem__(self, key: str) -> Any:
+        return getattr(self, key)
+
+    def __setitem__(self, key: str, value: Any) -> None:
+        setattr(self, key, value)
+
+    def __eq__(self, other: Any) -> bool:
+        return isinstance(other, self.__class__) and self._binding == other._binding
+
+    def __hash__(self) -> int:
+        return id(self._binding)
 
     @property
     def type_(self) -> (Any) | Literal["function"]:
@@ -1078,6 +1318,18 @@ class AiTextGenerationToolLegacyInput:
 
     def __getattr__(self, name: str) -> Any:
         return getattr(self._binding, name)
+
+    def __getitem__(self, key: str) -> Any:
+        return getattr(self, key)
+
+    def __setitem__(self, key: str, value: Any) -> None:
+        setattr(self, key, value)
+
+    def __eq__(self, other: Any) -> bool:
+        return isinstance(other, self.__class__) and self._binding == other._binding
+
+    def __hash__(self) -> int:
+        return id(self._binding)
 
     @property
     def name(self) -> str:
@@ -1153,6 +1405,18 @@ class AiTextGenerationToolOutput:
 
     def __getattr__(self, name: str) -> Any:
         return getattr(self._binding, name)
+
+    def __getitem__(self, key: str) -> Any:
+        return getattr(self, key)
+
+    def __setitem__(self, key: str, value: Any) -> None:
+        setattr(self, key, value)
+
+    def __eq__(self, other: Any) -> bool:
+        return isinstance(other, self.__class__) and self._binding == other._binding
+
+    def __hash__(self) -> int:
+        return id(self._binding)
 
     @property
     def id(self) -> str:

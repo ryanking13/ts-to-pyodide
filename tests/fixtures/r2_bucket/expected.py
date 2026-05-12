@@ -70,6 +70,18 @@ class R2Object:
     def __getattr__(self, name: str) -> Any:
         return getattr(self._binding, name)
 
+    def __getitem__(self, key: str) -> Any:
+        return getattr(self, key)
+
+    def __setitem__(self, key: str, value: Any) -> None:
+        setattr(self, key, value)
+
+    def __eq__(self, other: Any) -> bool:
+        return isinstance(other, self.__class__) and self._binding == other._binding
+
+    def __hash__(self) -> int:
+        return id(self._binding)
+
     @property
     def key(self) -> str:
         return self._binding.key
@@ -135,6 +147,18 @@ class R2Bucket:
     def __getattr__(self, name: str) -> Any:
         return getattr(self._binding, name)
 
+    def __getitem__(self, key: str) -> Any:
+        return getattr(self, key)
+
+    def __setitem__(self, key: str, value: Any) -> None:
+        setattr(self, key, value)
+
+    def __eq__(self, other: Any) -> bool:
+        return isinstance(other, self.__class__) and self._binding == other._binding
+
+    def __hash__(self) -> int:
+        return id(self._binding)
+
     async def head(self, key: str) -> R2Object | None:
         _v = _jsnull_to_none(await self._binding.head(key))
         return R2Object.from_js(_v) if _v is not None else None
@@ -174,6 +198,18 @@ class R2Checksums:
 
     def __getattr__(self, name: str) -> Any:
         return getattr(self._binding, name)
+
+    def __getitem__(self, key: str) -> Any:
+        return getattr(self, key)
+
+    def __setitem__(self, key: str, value: Any) -> None:
+        setattr(self, key, value)
+
+    def __eq__(self, other: Any) -> bool:
+        return isinstance(other, self.__class__) and self._binding == other._binding
+
+    def __hash__(self) -> int:
+        return id(self._binding)
 
     @property
     def md5(self) -> JsBuffer | None:
@@ -220,6 +256,18 @@ class R2ObjectBody:
 
     def __getattr__(self, name: str) -> Any:
         return getattr(self._binding, name)
+
+    def __getitem__(self, key: str) -> Any:
+        return getattr(self, key)
+
+    def __setitem__(self, key: str, value: Any) -> None:
+        setattr(self, key, value)
+
+    def __eq__(self, other: Any) -> bool:
+        return isinstance(other, self.__class__) and self._binding == other._binding
+
+    def __hash__(self) -> int:
+        return id(self._binding)
 
     @property
     def body(self) -> Any:
@@ -282,6 +330,18 @@ class R2MultipartUpload:
     def __getattr__(self, name: str) -> Any:
         return getattr(self._binding, name)
 
+    def __getitem__(self, key: str) -> Any:
+        return getattr(self, key)
+
+    def __setitem__(self, key: str, value: Any) -> None:
+        setattr(self, key, value)
+
+    def __eq__(self, other: Any) -> bool:
+        return isinstance(other, self.__class__) and self._binding == other._binding
+
+    def __hash__(self) -> int:
+        return id(self._binding)
+
     @property
     def key(self) -> str:
         return self._binding.key
@@ -334,6 +394,18 @@ class R2Objects:
 
     def __getattr__(self, name: str) -> Any:
         return getattr(self._binding, name)
+
+    def __getitem__(self, key: str) -> Any:
+        return getattr(self, key)
+
+    def __setitem__(self, key: str, value: Any) -> None:
+        setattr(self, key, value)
+
+    def __eq__(self, other: Any) -> bool:
+        return isinstance(other, self.__class__) and self._binding == other._binding
+
+    def __hash__(self) -> int:
+        return id(self._binding)
 
     @property
     def objects(self) -> list[R2Object]:
