@@ -64,39 +64,6 @@ def _auto_to_py(value: Any) -> Any:
         return [_auto_to_py(_jsnull_to_none(v)) for v in value]
     return value
 
-def _to_camel(s: str) -> str:
-    parts = s.split("_")
-    return parts[0] + "".join(p.capitalize() for p in parts[1:])
-
-def _to_snake(s: str) -> str:
-    import re
-    return re.sub(r"([a-z0-9])([A-Z])", r"\\1_\\2", s).lower()
-
-def _to_js_opts(opts: Any) -> Any:
-    if opts is None:
-        return None
-    def _convert(v: Any) -> Any:
-        if isinstance(v, dict):
-            return {_to_camel(k): _convert(val) for k, val in v.items() if val is not None}
-        if isinstance(v, list):
-            return [_convert(item) for item in v]
-        return v
-    return to_js(_convert(opts))
-
-def _from_js_opts(js_obj: Any) -> Any:
-    if js_obj is None:
-        return None
-    def _convert(v: Any) -> Any:
-        v = _jsnull_to_none(v)
-        if v is None:
-            return None
-        if isinstance(v, dict):
-            return {_to_snake(k): _convert(val) for k, val in v.items()}
-        if isinstance(v, list):
-            return [_convert(item) for item in v]
-        return v
-    return _convert(js_obj.to_py())
-
 def _none_to_jsnull(value: Any) -> Any:
     if value is None:
         try:
@@ -200,7 +167,10 @@ export class Renderer {
       // Skip dunder methods that Pyodide might added to the interface. We don't want that behavior
       (m) => m.name && !m.isStatic && !m.name.startsWith("__"),
     );
-    return !hasMethods && ir.properties.length > 0;
+    if (hasMethods) return false;
+    if (ir.properties.length === 0) return false;
+    const hasInvalidKey = ir.properties.some((p) => !isValidPythonIdentifier(p.name) || PYTHON_RESERVED.has(p.name));
+    return !hasInvalidKey;
   }
 
   private renderTypedDict(ir: InterfaceIR): string {
@@ -209,12 +179,11 @@ export class Renderer {
     const total = allOptional ? ", total=False" : "";
     const lines = [`class ${className}(TypedDict${total}):`];
     for (const prop of ir.properties) {
-      const pyName = toPythonName(prop.name);
       let typeStr = renderType(prop.type, this.knownInterfaces);
       if (prop.isOptional && !allOptional && !isNullable(prop.type)) {
         typeStr += " | None";
       }
-      lines.push(`    ${pyName}: ${typeStr}`);
+      lines.push(`    ${prop.name}: ${typeStr}`);
     }
     return lines.join("\n") + "\n";
   }
@@ -266,10 +235,16 @@ export class Renderer {
       "        return getattr(self._binding, name)",
       "",
       "    def __getitem__(self, key: str) -> Any:",
-      "        return getattr(self, _to_snake(key))",
+      "        return getattr(self, key)",
       "",
       "    def __setitem__(self, key: str, value: Any) -> None:",
-      "        setattr(self, _to_snake(key), value)",
+      "        setattr(self, key, value)",
+      "",
+      "    def __eq__(self, other: Any) -> bool:",
+      "        return isinstance(other, self.__class__) and self._binding == other._binding",
+      "",
+      "    def __hash__(self) -> int:",
+      "        return id(self._binding)",
     );
 
     for (const prop of ir.properties) {
@@ -398,27 +373,21 @@ export class Renderer {
 
   private analyzeOverloadArgs(sigs: SigIR[]): {
     maxParams: number;
-    toJsOpts: boolean[];
     toJs: boolean[];
   } {
     const maxParams = Math.max(...sigs.map((s) => s.params.length));
-    const toJsOpts: boolean[] = new Array(maxParams).fill(false);
     const toJs: boolean[] = new Array(maxParams).fill(false);
 
     for (let i = 0; i < maxParams; i++) {
       for (const sig of sigs) {
         const param = sig.params[i];
         if (!param) continue;
-        if (this.isDataBagType(param.type)) {
-          toJsOpts[i] = true;
-        } else if (needsToJs(param.type)) {
+        if (this.isDataBagType(param.type) || needsToJs(param.type)) {
           toJs[i] = true;
         }
       }
-      // _to_js_opts subsumes to_js for that position
-      if (toJsOpts[i]) toJs[i] = false;
     }
-    return { maxParams, toJsOpts, toJs };
+    return { maxParams, toJs };
   }
 
   private classifyReturnConversion(returns: TypeIR): string {
@@ -467,13 +436,13 @@ export class Renderer {
       case "wrapper":
         return `${wrapperClass}.from_js(${rawCall})` ;
       case "databag_nullable":
-        return `_from_js_opts(_jsnull_to_none(${rawCall}))`;
+        return `_auto_to_py(_jsnull_to_none(${rawCall}))`;
       case "databag":
-        return `_from_js_opts(${rawCall})`;
+        return `_auto_to_py(${rawCall})`;
       case "array_wrapper":
         return `[${arrayElemInfo!.className}.from_js(e) for e in ${rawCall}]`;
       case "array_databag":
-        return `[_from_js_opts(e) for e in ${rawCall}]`;
+        return `[_auto_to_py(e) for e in ${rawCall}]`;
       case "native_topy_nullable":
         return `${nativeToPyFn}(_jsnull_to_none(${rawCall}))`;
       case "native_topy":
@@ -501,7 +470,7 @@ export class Renderer {
     const anyAsync = sigs.some((s) => isPromise(s.returns));
     const prefix = anyAsync ? "async " : "";
 
-    const { maxParams, toJsOpts, toJs } = this.analyzeOverloadArgs(sigs);
+    const { maxParams, toJs } = this.analyzeOverloadArgs(sigs);
 
     const returnKinds = sigs.map((s) => {
       const ret = isPromise(s.returns) ? unwrapPromise(s.returns) : s.returns;
@@ -511,27 +480,24 @@ export class Renderer {
     const uniformReturn = uniqueKinds.size === 1;
 
     // When all sigs have kwparams (destructured inline objects like {columnNames: true}),
-    // the user may pass a dict positionally — mark that position for _to_js_opts conversion.
+    // the user may pass a dict positionally — mark that position for to_js conversion.
     let effectiveMaxParams = maxParams;
     if (sigs.every((s) => s.kwparams?.length && s.params.length === 0)) {
-      toJsOpts[0] = true;
+      toJs[0] = true;
       effectiveMaxParams = Math.max(effectiveMaxParams, 1);
     }
-    const needsArgConversionFinal = toJsOpts.some(Boolean) || toJs.some(Boolean);
+    const needsArgConversion = toJs.some(Boolean);
 
-    const argVar = needsArgConversionFinal ? "_a" : "args";
+    const argVar = needsArgConversion ? "_a" : "args";
     const kwVar = "kwargs";
 
     const lines: string[] = [];
     lines.push(`${prefix}def ${pyName}(self, *args: Any, **kwargs: Any) -> Any:`);
 
-    if (needsArgConversionFinal) {
+    if (needsArgConversion) {
       lines.push("    _a = list(args)");
       for (let i = 0; i < effectiveMaxParams; i++) {
-        if (toJsOpts[i]) {
-          lines.push(`    if len(_a) > ${i} and isinstance(_a[${i}], dict):`);
-          lines.push(`        _a[${i}] = _to_js_opts(_a[${i}])`);
-        } else if (toJs[i]) {
+        if (toJs[i]) {
           lines.push(`    if len(_a) > ${i}:`);
           lines.push(`        _a[${i}] = to_js(_a[${i}])`);
         }
@@ -673,13 +639,13 @@ export class Renderer {
     } else if (isDataBag && nullable) {
       getterBody =
         `    _v = _jsnull_to_none(${rawExpr})\n` +
-        `    return _from_js_opts(_v) if _v is not None else None`;
+        `    return _auto_to_py(_v) if _v is not None else None`;
     } else if (isDataBag) {
-      getterBody = `    return _from_js_opts(${rawExpr})`;
+      getterBody = `    return _auto_to_py(${rawExpr})`;
     } else if (arrayElem && !arrayElem.isDataBag) {
       getterBody = `    return [${arrayElem.className}.from_js(e) for e in ${rawExpr}]`;
     } else if (arrayElem && arrayElem.isDataBag) {
-      getterBody = `    return [_from_js_opts(e) for e in ${rawExpr}]`;
+      getterBody = `    return [_auto_to_py(e) for e in ${rawExpr}]`;
     } else if (nativeToPy && nullable) {
       getterBody =
         `    _v = _jsnull_to_none(${rawExpr})\n` +
@@ -767,18 +733,18 @@ export class Renderer {
     if (isDataBag && nullable) {
       return (
         `    _v = _jsnull_to_none(${rawCall})\n` +
-        `    return _from_js_opts(_v) if _v is not None else None`
+        `    return _auto_to_py(_v) if _v is not None else None`
       );
     }
     if (isDataBag) {
-      return `    return _from_js_opts(${rawCall})`;
+      return `    return _auto_to_py(${rawCall})`;
     }
     const arrayElem = this.resolveArrayElement(returns);
     if (arrayElem && !arrayElem.isDataBag) {
       return `    return [${arrayElem.className}.from_js(e) for e in ${rawCall}]`;
     }
     if (arrayElem && arrayElem.isDataBag) {
-      return `    return [_from_js_opts(e) for e in ${rawCall}]`;
+      return `    return [_auto_to_py(e) for e in ${rawCall}]`;
     }
     if (nativeToPy && nullable) {
       return (
@@ -825,13 +791,7 @@ export class Renderer {
       }
       return `${nativeToJs}(${name})`;
     }
-    if (this.isDataBagType(param.type)) {
-      return `_to_js_opts(${name})`;
-    }
-    if (needsToJs(param.type)) {
-      if (param.isOptional) {
-        return `to_js(${name}) if ${name} is not None else None`;
-      }
+    if (needsToJs(param.type) || this.isDataBagType(param.type)) {
       if (param.type.kind === "parameterReference") {
         return `to_js(_none_to_jsnull(${name}))`;
       }

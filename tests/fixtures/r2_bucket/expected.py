@@ -30,39 +30,6 @@ def _auto_to_py(value: Any) -> Any:
         return [_auto_to_py(_jsnull_to_none(v)) for v in value]
     return value
 
-def _to_camel(s: str) -> str:
-    parts = s.split("_")
-    return parts[0] + "".join(p.capitalize() for p in parts[1:])
-
-def _to_snake(s: str) -> str:
-    import re
-    return re.sub(r"([a-z0-9])([A-Z])", r"\1_\2", s).lower()
-
-def _to_js_opts(opts: Any) -> Any:
-    if opts is None:
-        return None
-    def _convert(v: Any) -> Any:
-        if isinstance(v, dict):
-            return {_to_camel(k): _convert(val) for k, val in v.items() if val is not None}
-        if isinstance(v, list):
-            return [_convert(item) for item in v]
-        return v
-    return to_js(_convert(opts))
-
-def _from_js_opts(js_obj: Any) -> Any:
-    if js_obj is None:
-        return None
-    def _convert(v: Any) -> Any:
-        v = _jsnull_to_none(v)
-        if v is None:
-            return None
-        if isinstance(v, dict):
-            return {_to_snake(k): _convert(val) for k, val in v.items()}
-        if isinstance(v, list):
-            return [_convert(item) for item in v]
-        return v
-    return _convert(js_obj.to_py())
-
 def _none_to_jsnull(value: Any) -> Any:
     if value is None:
         try:
@@ -104,10 +71,16 @@ class R2Object:
         return getattr(self._binding, name)
 
     def __getitem__(self, key: str) -> Any:
-        return getattr(self, _to_snake(key))
+        return getattr(self, key)
 
     def __setitem__(self, key: str, value: Any) -> None:
-        setattr(self, _to_snake(key), value)
+        setattr(self, key, value)
+
+    def __eq__(self, other: Any) -> bool:
+        return isinstance(other, self.__class__) and self._binding == other._binding
+
+    def __hash__(self) -> int:
+        return id(self._binding)
 
     @property
     def key(self) -> str:
@@ -140,7 +113,7 @@ class R2Object:
     @property
     def http_metadata(self) -> R2HTTPMetadata | None:
         _v = _jsnull_to_none(self._binding.httpMetadata)
-        return _from_js_opts(_v) if _v is not None else None
+        return _auto_to_py(_v) if _v is not None else None
 
     @property
     def custom_metadata(self) -> dict[str, str] | None:
@@ -175,24 +148,30 @@ class R2Bucket:
         return getattr(self._binding, name)
 
     def __getitem__(self, key: str) -> Any:
-        return getattr(self, _to_snake(key))
+        return getattr(self, key)
 
     def __setitem__(self, key: str, value: Any) -> None:
-        setattr(self, _to_snake(key), value)
+        setattr(self, key, value)
+
+    def __eq__(self, other: Any) -> bool:
+        return isinstance(other, self.__class__) and self._binding == other._binding
+
+    def __hash__(self) -> int:
+        return id(self._binding)
 
     async def head(self, key: str) -> R2Object | None:
         _v = _jsnull_to_none(await self._binding.head(key))
         return R2Object.from_js(_v) if _v is not None else None
 
     async def get(self, key: str, options: R2GetOptions | None = None) -> R2ObjectBody | None:
-        _v = _jsnull_to_none(await self._binding.get(key, _to_js_opts(options)))
+        _v = _jsnull_to_none(await self._binding.get(key, to_js(options)))
         return R2ObjectBody.from_js(_v) if _v is not None else None
 
     async def put(self, key: str, value: Any | JsBuffer | str | None, options: R2PutOptions | None = None) -> R2Object:
-        return R2Object.from_js(await self._binding.put(key, to_js(value), _to_js_opts(options)))
+        return R2Object.from_js(await self._binding.put(key, to_js(value), to_js(options)))
 
     async def create_multipart_upload(self, key: str, options: R2MultipartOptions | None = None) -> R2MultipartUpload:
-        return R2MultipartUpload.from_js(await self._binding.createMultipartUpload(key, _to_js_opts(options)))
+        return R2MultipartUpload.from_js(await self._binding.createMultipartUpload(key, to_js(options)))
 
     def resume_multipart_upload(self, key: str, upload_id: str) -> R2MultipartUpload:
         return R2MultipartUpload.from_js(self._binding.resumeMultipartUpload(key, upload_id))
@@ -201,7 +180,7 @@ class R2Bucket:
         await self._binding.delete(to_js(keys))
 
     async def list(self, options: R2ListOptions | None = None) -> R2Objects:
-        return R2Objects.from_js(await self._binding.list(_to_js_opts(options)))
+        return R2Objects.from_js(await self._binding.list(to_js(options)))
 
 
 class R2Checksums:
@@ -221,10 +200,16 @@ class R2Checksums:
         return getattr(self._binding, name)
 
     def __getitem__(self, key: str) -> Any:
-        return getattr(self, _to_snake(key))
+        return getattr(self, key)
 
     def __setitem__(self, key: str, value: Any) -> None:
-        setattr(self, _to_snake(key), value)
+        setattr(self, key, value)
+
+    def __eq__(self, other: Any) -> bool:
+        return isinstance(other, self.__class__) and self._binding == other._binding
+
+    def __hash__(self) -> int:
+        return id(self._binding)
 
     @property
     def md5(self) -> JsBuffer | None:
@@ -239,21 +224,21 @@ class R2Checksums:
         return _jsnull_to_none(self._binding.sha256)
 
     def to_json(self) -> R2StringChecksums:
-        return _from_js_opts(self._binding.toJSON())
+        return _auto_to_py(self._binding.toJSON())
 
 
 class R2HTTPMetadata(TypedDict, total=False):
-    content_type: str
-    content_language: str
-    content_disposition: str
-    content_encoding: str
-    cache_control: str
+    contentType: str
+    contentLanguage: str
+    contentDisposition: str
+    contentEncoding: str
+    cacheControl: str
 
 
 class R2GetOptions(TypedDict, total=False):
-    only_if: R2Conditional | dict[str, str] | list[tuple[str, str]] | JsProxy | None
+    onlyIf: R2Conditional | dict[str, str] | list[tuple[str, str]] | JsProxy | None
     range: dict[str, str] | list[tuple[str, str]] | JsProxy
-    ssec_key: JsBuffer | str | None
+    ssecKey: JsBuffer | str | None
 
 
 class R2ObjectBody:
@@ -273,10 +258,16 @@ class R2ObjectBody:
         return getattr(self._binding, name)
 
     def __getitem__(self, key: str) -> Any:
-        return getattr(self, _to_snake(key))
+        return getattr(self, key)
 
     def __setitem__(self, key: str, value: Any) -> None:
-        setattr(self, _to_snake(key), value)
+        setattr(self, key, value)
+
+    def __eq__(self, other: Any) -> bool:
+        return isinstance(other, self.__class__) and self._binding == other._binding
+
+    def __hash__(self) -> int:
+        return id(self._binding)
 
     @property
     def body(self) -> Any:
@@ -300,27 +291,27 @@ class R2ObjectBody:
 
 
 class R2Conditional(TypedDict, total=False):
-    etag_matches: str
-    etag_does_not_match: str
-    uploaded_before: datetime
-    uploaded_after: datetime
-    seconds_granularity: bool
+    etagMatches: str
+    etagDoesNotMatch: str
+    uploadedBefore: datetime
+    uploadedAfter: datetime
+    secondsGranularity: bool
 
 
 class R2PutOptions(TypedDict, total=False):
-    only_if: R2Conditional | dict[str, str] | list[tuple[str, str]] | JsProxy | None
-    http_metadata: R2HTTPMetadata | dict[str, str] | list[tuple[str, str]] | JsProxy | None
-    custom_metadata: dict[str, str]
+    onlyIf: R2Conditional | dict[str, str] | list[tuple[str, str]] | JsProxy | None
+    httpMetadata: R2HTTPMetadata | dict[str, str] | list[tuple[str, str]] | JsProxy | None
+    customMetadata: dict[str, str]
     md5: JsBuffer | str | None
     sha256: JsBuffer | str | None
-    storage_class: str
-    ssec_key: JsBuffer | str | None
+    storageClass: str
+    ssecKey: JsBuffer | str | None
 
 
 class R2MultipartOptions(TypedDict, total=False):
-    http_metadata: R2HTTPMetadata | dict[str, str] | list[tuple[str, str]] | JsProxy | None
-    custom_metadata: dict[str, str]
-    storage_class: str
+    httpMetadata: R2HTTPMetadata | dict[str, str] | list[tuple[str, str]] | JsProxy | None
+    customMetadata: dict[str, str]
+    storageClass: str
 
 
 class R2MultipartUpload:
@@ -340,10 +331,16 @@ class R2MultipartUpload:
         return getattr(self._binding, name)
 
     def __getitem__(self, key: str) -> Any:
-        return getattr(self, _to_snake(key))
+        return getattr(self, key)
 
     def __setitem__(self, key: str, value: Any) -> None:
-        setattr(self, _to_snake(key), value)
+        setattr(self, key, value)
+
+    def __eq__(self, other: Any) -> bool:
+        return isinstance(other, self.__class__) and self._binding == other._binding
+
+    def __hash__(self) -> int:
+        return id(self._binding)
 
     @property
     def key(self) -> str:
@@ -354,13 +351,13 @@ class R2MultipartUpload:
         return self._binding.uploadId
 
     async def upload_part(self, part_number: int | float, value: Any | JsBuffer | str) -> R2UploadedPart:
-        return _from_js_opts(await self._binding.uploadPart(part_number, to_js(value)))
+        return _auto_to_py(await self._binding.uploadPart(part_number, to_js(value)))
 
     async def abort(self) -> None:
         await self._binding.abort()
 
     async def complete(self, uploaded_parts: list[R2UploadedPart]) -> R2Object:
-        return R2Object.from_js(await self._binding.complete(_to_js_opts(uploaded_parts)))
+        return R2Object.from_js(await self._binding.complete(to_js(uploaded_parts)))
 
 
 class R2ListOptions(TypedDict, total=False):
@@ -368,7 +365,7 @@ class R2ListOptions(TypedDict, total=False):
     prefix: str
     cursor: str
     delimiter: str
-    start_after: str
+    startAfter: str
 
 
 class R2StringChecksums(TypedDict, total=False):
@@ -378,7 +375,7 @@ class R2StringChecksums(TypedDict, total=False):
 
 
 class R2UploadedPart(TypedDict):
-    part_number: int | float
+    partNumber: int | float
     etag: str
 
 
@@ -399,10 +396,16 @@ class R2Objects:
         return getattr(self._binding, name)
 
     def __getitem__(self, key: str) -> Any:
-        return getattr(self, _to_snake(key))
+        return getattr(self, key)
 
     def __setitem__(self, key: str, value: Any) -> None:
-        setattr(self, _to_snake(key), value)
+        setattr(self, key, value)
+
+    def __eq__(self, other: Any) -> bool:
+        return isinstance(other, self.__class__) and self._binding == other._binding
+
+    def __hash__(self) -> int:
+        return id(self._binding)
 
     @property
     def objects(self) -> list[R2Object]:

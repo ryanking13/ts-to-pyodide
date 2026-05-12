@@ -30,39 +30,6 @@ def _auto_to_py(value: Any) -> Any:
         return [_auto_to_py(_jsnull_to_none(v)) for v in value]
     return value
 
-def _to_camel(s: str) -> str:
-    parts = s.split("_")
-    return parts[0] + "".join(p.capitalize() for p in parts[1:])
-
-def _to_snake(s: str) -> str:
-    import re
-    return re.sub(r"([a-z0-9])([A-Z])", r"\1_\2", s).lower()
-
-def _to_js_opts(opts: Any) -> Any:
-    if opts is None:
-        return None
-    def _convert(v: Any) -> Any:
-        if isinstance(v, dict):
-            return {_to_camel(k): _convert(val) for k, val in v.items() if val is not None}
-        if isinstance(v, list):
-            return [_convert(item) for item in v]
-        return v
-    return to_js(_convert(opts))
-
-def _from_js_opts(js_obj: Any) -> Any:
-    if js_obj is None:
-        return None
-    def _convert(v: Any) -> Any:
-        v = _jsnull_to_none(v)
-        if v is None:
-            return None
-        if isinstance(v, dict):
-            return {_to_snake(k): _convert(val) for k, val in v.items()}
-        if isinstance(v, list):
-            return [_convert(item) for item in v]
-        return v
-    return _convert(js_obj.to_py())
-
 def _none_to_jsnull(value: Any) -> Any:
     if value is None:
         try:
@@ -104,45 +71,51 @@ class Vectorize:
         return getattr(self._binding, name)
 
     def __getitem__(self, key: str) -> Any:
-        return getattr(self, _to_snake(key))
+        return getattr(self, key)
 
     def __setitem__(self, key: str, value: Any) -> None:
-        setattr(self, _to_snake(key), value)
+        setattr(self, key, value)
+
+    def __eq__(self, other: Any) -> bool:
+        return isinstance(other, self.__class__) and self._binding == other._binding
+
+    def __hash__(self) -> int:
+        return id(self._binding)
 
     async def describe(self) -> VectorizeIndexInfo:
-        return _from_js_opts(await self._binding.describe())
+        return _auto_to_py(await self._binding.describe())
 
     async def query(self, vector: Any | list[int | float], options: VectorizeQueryOptions | None = None) -> VectorizeMatches:
-        return _from_js_opts(await self._binding.query(to_js(vector), _to_js_opts(options)))
+        return _auto_to_py(await self._binding.query(to_js(vector), to_js(options)))
 
     async def query_by_id(self, vector_id: str, options: VectorizeQueryOptions | None = None) -> VectorizeMatches:
-        return _from_js_opts(await self._binding.queryById(vector_id, _to_js_opts(options)))
+        return _auto_to_py(await self._binding.queryById(vector_id, to_js(options)))
 
     async def insert(self, vectors: list[VectorizeVector]) -> VectorizeAsyncMutation:
-        return _from_js_opts(await self._binding.insert(_to_js_opts(vectors)))
+        return _auto_to_py(await self._binding.insert(to_js(vectors)))
 
     async def upsert(self, vectors: list[VectorizeVector]) -> VectorizeAsyncMutation:
-        return _from_js_opts(await self._binding.upsert(_to_js_opts(vectors)))
+        return _auto_to_py(await self._binding.upsert(to_js(vectors)))
 
     async def delete_by_ids(self, ids: list[str]) -> VectorizeAsyncMutation:
-        return _from_js_opts(await self._binding.deleteByIds(to_js(ids)))
+        return _auto_to_py(await self._binding.deleteByIds(to_js(ids)))
 
     async def get_by_ids(self, ids: list[str]) -> list[VectorizeVector]:
-        return [_from_js_opts(e) for e in await self._binding.getByIds(to_js(ids))]
+        return [_auto_to_py(e) for e in await self._binding.getByIds(to_js(ids))]
 
 
 class VectorizeIndexInfo(TypedDict):
-    vector_count: int | float
+    vectorCount: int | float
     dimensions: int | float
-    processed_up_to_datetime: int | float
-    processed_up_to_mutation: int | float
+    processedUpToDatetime: int | float
+    processedUpToMutation: int | float
 
 
 class VectorizeQueryOptions(TypedDict, total=False):
-    top_k: int | float
+    topK: int | float
     namespace: str
-    return_values: bool
-    return_metadata: bool | Literal["all", "indexed", "none"] | None
+    returnValues: bool
+    returnMetadata: bool | Literal["all", "indexed", "none"] | None
     filter: dict[str, Any]
 
 
@@ -159,7 +132,7 @@ class VectorizeVector(TypedDict):
 
 
 class VectorizeAsyncMutation(TypedDict):
-    mutation_id: str
+    mutationId: str
 
 
 class VectorizeMatch(TypedDict):

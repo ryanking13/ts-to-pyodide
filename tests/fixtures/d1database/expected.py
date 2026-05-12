@@ -30,39 +30,6 @@ def _auto_to_py(value: Any) -> Any:
         return [_auto_to_py(_jsnull_to_none(v)) for v in value]
     return value
 
-def _to_camel(s: str) -> str:
-    parts = s.split("_")
-    return parts[0] + "".join(p.capitalize() for p in parts[1:])
-
-def _to_snake(s: str) -> str:
-    import re
-    return re.sub(r"([a-z0-9])([A-Z])", r"\1_\2", s).lower()
-
-def _to_js_opts(opts: Any) -> Any:
-    if opts is None:
-        return None
-    def _convert(v: Any) -> Any:
-        if isinstance(v, dict):
-            return {_to_camel(k): _convert(val) for k, val in v.items() if val is not None}
-        if isinstance(v, list):
-            return [_convert(item) for item in v]
-        return v
-    return to_js(_convert(opts))
-
-def _from_js_opts(js_obj: Any) -> Any:
-    if js_obj is None:
-        return None
-    def _convert(v: Any) -> Any:
-        v = _jsnull_to_none(v)
-        if v is None:
-            return None
-        if isinstance(v, dict):
-            return {_to_snake(k): _convert(val) for k, val in v.items()}
-        if isinstance(v, list):
-            return [_convert(item) for item in v]
-        return v
-    return _convert(js_obj.to_py())
-
 def _none_to_jsnull(value: Any) -> Any:
     if value is None:
         try:
@@ -104,22 +71,28 @@ class D1Database:
         return getattr(self._binding, name)
 
     def __getitem__(self, key: str) -> Any:
-        return getattr(self, _to_snake(key))
+        return getattr(self, key)
 
     def __setitem__(self, key: str, value: Any) -> None:
-        setattr(self, _to_snake(key), value)
+        setattr(self, key, value)
+
+    def __eq__(self, other: Any) -> bool:
+        return isinstance(other, self.__class__) and self._binding == other._binding
+
+    def __hash__(self) -> int:
+        return id(self._binding)
 
     def prepare(self, query: str) -> D1PreparedStatement:
         return D1PreparedStatement.from_js(self._binding.prepare(query))
 
     async def batch(self, statements: list[D1PreparedStatement]) -> list[D1Result]:
-        return [_from_js_opts(e) for e in await self._binding.batch(to_js(statements))]
+        return [_auto_to_py(e) for e in await self._binding.batch(to_js(statements))]
 
     async def exec(self, query: str) -> D1ExecResult:
-        return _from_js_opts(await self._binding.exec(query))
+        return _auto_to_py(await self._binding.exec(query))
 
     def with_session(self, constraint_or_bookmark: str | Literal["first-primary", "first-unconstrained"] | None = None) -> D1DatabaseSession:
-        return D1DatabaseSession.from_js(self._binding.withSession(to_js(constraint_or_bookmark) if constraint_or_bookmark is not None else None))
+        return D1DatabaseSession.from_js(self._binding.withSession(to_js(constraint_or_bookmark)))
 
     async def dump(self) -> JsBuffer:
         return await self._binding.dump()
@@ -142,16 +115,22 @@ class D1DatabaseSession:
         return getattr(self._binding, name)
 
     def __getitem__(self, key: str) -> Any:
-        return getattr(self, _to_snake(key))
+        return getattr(self, key)
 
     def __setitem__(self, key: str, value: Any) -> None:
-        setattr(self, _to_snake(key), value)
+        setattr(self, key, value)
+
+    def __eq__(self, other: Any) -> bool:
+        return isinstance(other, self.__class__) and self._binding == other._binding
+
+    def __hash__(self) -> int:
+        return id(self._binding)
 
     def prepare(self, query: str) -> D1PreparedStatement:
         return D1PreparedStatement.from_js(self._binding.prepare(query))
 
     async def batch(self, statements: list[D1PreparedStatement]) -> list[D1Result]:
-        return [_from_js_opts(e) for e in await self._binding.batch(to_js(statements))]
+        return [_auto_to_py(e) for e in await self._binding.batch(to_js(statements))]
 
     def get_bookmark(self) -> str | None:
         return _jsnull_to_none(self._binding.getBookmark())
@@ -174,10 +153,16 @@ class D1PreparedStatement:
         return getattr(self._binding, name)
 
     def __getitem__(self, key: str) -> Any:
-        return getattr(self, _to_snake(key))
+        return getattr(self, key)
 
     def __setitem__(self, key: str, value: Any) -> None:
-        setattr(self, _to_snake(key), value)
+        setattr(self, key, value)
+
+    def __eq__(self, other: Any) -> bool:
+        return isinstance(other, self.__class__) and self._binding == other._binding
+
+    def __hash__(self) -> int:
+        return id(self._binding)
 
     def bind(self, *values: Any) -> D1PreparedStatement:
         return D1PreparedStatement.from_js(self._binding.bind(*[_none_to_jsnull(v) for v in values]))
@@ -186,15 +171,15 @@ class D1PreparedStatement:
         return _auto_to_py(_jsnull_to_none(await self._binding.first(*args, **kwargs)))
 
     async def run(self) -> D1Result:
-        return _from_js_opts(await self._binding.run())
+        return _auto_to_py(await self._binding.run())
 
     async def all(self) -> D1Result:
-        return _from_js_opts(await self._binding.all())
+        return _auto_to_py(await self._binding.all())
 
     async def raw(self, *args: Any, **kwargs: Any) -> Any:
         _a = list(args)
-        if len(_a) > 0 and isinstance(_a[0], dict):
-            _a[0] = _to_js_opts(_a[0])
+        if len(_a) > 0:
+            _a[0] = to_js(_a[0])
         return _auto_to_py(await self._binding.raw(*_a, **kwargs))
 
 
