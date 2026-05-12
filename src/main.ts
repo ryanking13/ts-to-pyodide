@@ -72,10 +72,14 @@ function main() {
   } else {
     const renderer = new Renderer();
     const python = renderer.renderFile(result.topLevels.ifaces);
-    mkdirSync(dirname(resolve(outFile)), { recursive: true });
+    const outDir = dirname(resolve(outFile));
+    mkdirSync(outDir, { recursive: true });
     writeFileSync(outFile, python);
+    const preludeDest = resolve(outDir, "prelude.py");
+    writeFileSync(preludeDest, renderer.getPrelude());
     const classCount = (python.match(/^class /gm) || []).length;
     console.log(`Generated ${classCount} classes → ${outFile}`);
+    console.log(`Prelude → ${preludeDest}`);
   }
 }
 

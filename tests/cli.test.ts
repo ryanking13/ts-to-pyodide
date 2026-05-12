@@ -36,18 +36,24 @@ describe("CLI", () => {
   });
 
   describe("render subcommand", () => {
-    it("writes a .py file with prelude and classes", () => {
+    it("writes a .py file with import header and classes, plus prelude.py", () => {
       const outFile = join(TMP_DIR, "render-test.py");
       const stdout = runCli("render", FIXTURE_DIR, outFile);
 
       assert.match(stdout, /Generated \d+ classes/);
+      assert.match(stdout, /Prelude/);
 
       const content = readFileSync(outFile, "utf-8");
-      assert.match(content, /from typing import Any, Literal, Never, TypedDict, overload/);
-      assert.match(content, /from pyodide\.ffi import JsBuffer, JsProxy/);
-      assert.match(content, /def _jsnull_to_none/);
+      assert.ok(content.includes("from prelude import"), "expected prelude import");
+      assert.ok(!content.includes("def _jsnull_to_none"), "prelude should not be inlined");
       assert.ok(content.includes("class KVNamespace:"), "expected class KVNamespace in output");
       assert.ok(content.includes("def from_js(cls, js_obj: JsProxy)"), "expected from_js in output");
+
+      const preludeFile = join(TMP_DIR, "prelude.py");
+      const prelude = readFileSync(preludeFile, "utf-8");
+      assert.ok(prelude.includes("from pyodide.ffi import JsBuffer, JsProxy"));
+      assert.ok(prelude.includes("def _jsnull_to_none"));
+      assert.ok(prelude.includes("class Headers:"));
     });
   });
 
@@ -73,6 +79,7 @@ describe("CLI", () => {
       assert.match(stdout, /Generated \d+ classes/);
 
       const content = readFileSync(outFile, "utf-8");
+      assert.ok(content.includes("from prelude import"));
       assert.ok(content.includes("class KVNamespace:"));
     });
   });

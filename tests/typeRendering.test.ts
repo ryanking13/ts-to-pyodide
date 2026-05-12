@@ -106,16 +106,14 @@ describe("renderType", () => {
     assert.strictEqual(renderType(ir), "dict[str, int | float]");
   });
 
-  it("Headers renders as native type", () => {
+  it("Headers renders as class name via knownInterfaces", () => {
     const ir: TypeIR = {
       kind: "reference",
       name: "Headers",
       typeArgs: [],
     };
-    assert.strictEqual(
-      renderType(ir),
-      "dict[str, str] | list[tuple[str, str]] | JsProxy",
-    );
+    const known = new Map([["Headers", "Headers"]]);
+    assert.strictEqual(renderType(ir, known), "Headers");
   });
 
   it("paren", () => {

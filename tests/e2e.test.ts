@@ -419,7 +419,8 @@ describe("e2e: constructor support", () => {
     const output = renderer.renderFile(result.topLevels.ifaces);
 
     assert.ok(output.includes("class MyService:"));
-    assert.ok(!output.includes("def __init__"));
+    const myServiceSection = output.substring(output.indexOf("class MyService:"));
+    assert.ok(!myServiceSection.includes("def __init__"));
     assert.ok(output.includes("def from_js(cls, js_obj: JsProxy) -> MyService:"));
   });
 
@@ -452,7 +453,8 @@ describe("e2e: constructor support", () => {
     const output = renderer.renderFile(result.topLevels.ifaces);
 
     assert.ok(output.includes("class KVNamespace:"));
-    assert.ok(!output.includes("def __init__"));
+    const kvSection = output.substring(output.indexOf("class KVNamespace:"));
+    assert.ok(!kvSection.includes("def __init__"));
     assert.ok(output.includes("def from_js(cls, js_obj: JsProxy) -> KVNamespace:"));
   });
 

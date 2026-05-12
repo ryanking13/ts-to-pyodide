@@ -1,3 +1,6 @@
+import { readFileSync } from "fs";
+import { resolve, dirname } from "path";
+import { fileURLToPath } from "url";
 import {
   InterfaceIR,
   CallableIR,
@@ -21,6 +24,7 @@ import {
   isPromise,
   isVoidReturn,
   NATIVE_TYPES,
+  PRELUDE_CLASSES,
   REFERENCE_TYPE_MAP,
   needsAutoToPy,
   needsCreateProxy,
@@ -31,62 +35,13 @@ import {
   unwrapPromise,
 } from "./typeRendering";
 
-const PRELUDE = `\
+const __dirname = dirname(fileURLToPath(import.meta.url));
+
+const PRELUDE_PATH = resolve(__dirname, "prelude.py");
+
+const IMPORT_HEADER = `\
 from __future__ import annotations
-from datetime import datetime, timezone
-from typing import Any, Literal, Never, TypedDict, overload
-import js
-from pyodide.ffi import JsBuffer, JsProxy, create_proxy, to_js as _raw_to_js
-
-def to_js(obj: Any, **kwargs: Any) -> Any:
-    if "dict_converter" not in kwargs:
-        kwargs["dict_converter"] = js.Object.fromEntries
-    return _raw_to_js(obj, **kwargs)
-
-def _jsnull_to_none(value: Any) -> Any:
-    try:
-        from pyodide.ffi import jsnull
-    except ImportError:
-        return value
-    if value is jsnull:
-        return None
-    return value
-
-def _auto_to_py(value: Any) -> Any:
-    if isinstance(value, JsProxy):
-        try:
-            value = value.to_py()
-        except Exception:
-            return value
-    if isinstance(value, dict):
-        return {k: _auto_to_py(_jsnull_to_none(v)) for k, v in value.items()}
-    if isinstance(value, list):
-        return [_auto_to_py(_jsnull_to_none(v)) for v in value]
-    return value
-
-def _none_to_jsnull(value: Any) -> Any:
-    if value is None:
-        try:
-            from pyodide.ffi import jsnull
-            return jsnull
-        except ImportError:
-            return value
-    return value
-
-def _to_js_headers(headers: dict[str, str] | list[tuple[str, str]] | JsProxy) -> JsProxy:
-    if isinstance(headers, dict):
-        return js.Headers.new(list(headers.items()))
-    elif isinstance(headers, list):
-        return js.Headers.new(headers)
-    return headers
-
-def _to_js_date(dt: datetime | JsProxy) -> JsProxy:
-    if isinstance(dt, JsProxy):
-        return dt
-    return js.Date.new(int(dt.timestamp() * 1000))
-
-def _from_js_date(js_date: Any) -> datetime:
-    return datetime.fromtimestamp(js_date.getTime() / 1000, tz=timezone.utc)
+from prelude import *
 `;
 
 /**
@@ -101,18 +56,30 @@ export class Renderer {
   // TODO: accept optional constructor name map (JSON config) to emit a
   // CONSTRUCTOR_MAP dict for runtime dispatch (e.g. KVNamespace → KvNamespace).
   // Needed for downstream auto-wrapping of env bindings by constructor.name.
+  getPrelude(): string {
+    return readFileSync(PRELUDE_PATH, "utf-8");
+  }
+
   renderFile(interfaces: InterfaceIR[]): string {
     const deduped = this.deduplicateInterfaces(interfaces).filter(
-      (ir) => !(ir.name in REFERENCE_TYPE_MAP || stripIfaceSuffix(ir.name) in REFERENCE_TYPE_MAP),
+      (ir) => {
+        const className = stripIfaceSuffix(ir.name);
+        if (ir.name in REFERENCE_TYPE_MAP || className in REFERENCE_TYPE_MAP) return false;
+        if (PRELUDE_CLASSES.has(className)) return false;
+        return true;
+      },
     );
     this.knownInterfaces = buildKnownInterfacesMap(
       deduped.map((ir) => ir.name),
     );
+    for (const name of PRELUDE_CLASSES) {
+      this.knownInterfaces.set(name, name);
+    }
     this.dataBagNames = this.classifyDataBags(deduped);
     const bodies = deduped.map((ir) =>
       this.dataBagNames.has(ir.name) ? this.renderTypedDict(ir) : this.renderInterface(ir),
     );
-    return PRELUDE + "\n" + bodies.join("\n\n");
+    return IMPORT_HEADER + "\n" + bodies.join("\n\n");
   }
 
   private classifyDataBags(interfaces: InterfaceIR[]): Set<string> {
@@ -147,6 +114,7 @@ export class Renderer {
 
   private typeRefsWrapperClass(ir: TypeIR, dataBags: Set<string>): boolean {
     if (ir.kind === "reference") {
+      if (PRELUDE_CLASSES.has(ir.name)) return false;
       return this.knownInterfaces.has(ir.name) && !dataBags.has(ir.name);
     }
     if (ir.kind === "union") {
@@ -783,6 +751,16 @@ export class Renderer {
     const name = toPythonName(param.name);
     if (needsCreateProxy(param.type)) {
       return `create_proxy(${name})`;
+    }
+    const wrapperClass = resolveKnownInterface(param.type, this.knownInterfaces);
+    if (wrapperClass && !this.dataBagNames.has(wrapperClass)) {
+      if (PRELUDE_CLASSES.has(wrapperClass)) {
+        return `${name}.js_object if isinstance(${name}, ${wrapperClass}) else ${name}`;
+      }
+      if (param.isOptional) {
+        return `${name}.js_object if ${name} is not None else None`;
+      }
+      return `${name}.js_object`;
     }
     const nativeToJs = this.getNativeToJs(param.type);
     if (nativeToJs) {

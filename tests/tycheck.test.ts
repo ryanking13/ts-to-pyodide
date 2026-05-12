@@ -33,6 +33,7 @@ function checkTy(code: string): void {
   const file = join(dir, "test.py");
   try {
     writeFileSync(join(dir, "js.pyi"), JS_STUB);
+    writeFileSync(join(dir, "prelude.py"), renderer.getPrelude());
     writeFileSync(file, code);
     execSync(
       `uvx --with pyodide-py==0.28.2 --python 3.13 ty check --extra-search-path ${dir} ${file}`,
