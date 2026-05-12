@@ -397,18 +397,24 @@ describe("callable param conversion", () => {
 });
 
 describe("renderFile", () => {
-  it("includes prelude with pyodide imports", () => {
+  it("emits import header instead of inlined prelude", () => {
     const result = renderer.renderFile([irInterface("X_iface")]);
-    assert.ok(result.includes("from typing import Any, Literal, Never, TypedDict, overload"));
-    assert.ok(result.includes("from pyodide.ffi import JsBuffer, JsProxy, create_proxy, to_js"));
-    assert.ok(result.includes("def _jsnull_to_none"));
+    assert.ok(result.includes("from prelude import"));
+    assert.ok(!result.includes("def _jsnull_to_none"));
   });
 
-  it("prelude comes before class body", () => {
+  it("import header comes before class body", () => {
     const result = renderer.renderFile([irInterface("X_iface")]);
-    const preludeEnd = result.indexOf("class X:");
-    assert.ok(preludeEnd > 0);
-    assert.ok(result.indexOf("from pyodide.ffi import JsBuffer") < preludeEnd);
+    const classStart = result.indexOf("class X:");
+    assert.ok(classStart > 0);
+    assert.ok(result.indexOf("from prelude import") < classStart);
+  });
+
+  it("getPrelude returns prelude.py content", () => {
+    const prelude = renderer.getPrelude();
+    assert.ok(prelude.includes("from pyodide.ffi import JsBuffer, JsProxy"));
+    assert.ok(prelude.includes("def _jsnull_to_none"));
+    assert.ok(prelude.includes("class Headers:"));
   });
 
   it("multiple interfaces in one file", () => {
@@ -418,7 +424,7 @@ describe("renderFile", () => {
     ]);
     assert.ok(result.includes("class A:"));
     assert.ok(result.includes("class B:"));
-    const classCount = result.split("def from_js").length - 1;
+    const classCount = (result.match(/^class [A-Z]\w*:/gm) || []).length;
     assert.strictEqual(classCount, 2);
   });
 });

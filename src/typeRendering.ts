@@ -10,11 +10,9 @@ export type NativeTypeInfo = {
   toJs?: string;
 };
 
+export const PRELUDE_CLASSES = new Set(["Headers"]);
+
 export const NATIVE_TYPES: Record<string, NativeTypeInfo> = {
-  Headers: {
-    pyType: "dict[str, str] | list[tuple[str, str]] | JsProxy",
-    toJs: "_to_js_headers",
-  },
   Date: {
     pyType: "datetime",
     toJs: "_to_js_date",
@@ -23,6 +21,9 @@ export const NATIVE_TYPES: Record<string, NativeTypeInfo> = {
 };
 
 export const REFERENCE_TYPE_MAP: Record<string, string> = {
+  ReadableStream: "JsProxy",
+  WritableStream: "JsProxy",
+  TransformStream: "JsProxy",
   ArrayBuffer: "JsBuffer",
   ArrayBufferLike: "JsBuffer",
   ArrayBufferView_iface: "JsBuffer",
