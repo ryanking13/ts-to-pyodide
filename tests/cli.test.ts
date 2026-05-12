@@ -84,6 +84,29 @@ describe("CLI", () => {
     });
   });
 
+  describe("--only flag", () => {
+    it("renders only specified classes and their dependencies", () => {
+      const outFile = join(TMP_DIR, "only-test.py");
+      const stdout = runCli("render", FIXTURE_DIR, outFile, "--only", "KVNamespace");
+
+      assert.match(stdout, /Filtering to KVNamespace/);
+      assert.match(stdout, /Generated \d+ classes/);
+
+      const content = readFileSync(outFile, "utf-8");
+      assert.ok(content.includes("class KVNamespace:"));
+    });
+
+    it("produces no classes when --only specifies unknown name", () => {
+      const outFile = join(TMP_DIR, "only-none-test.py");
+      const stdout = runCli("render", FIXTURE_DIR, outFile, "--only", "NonExistent");
+
+      assert.match(stdout, /Filtering to NonExistent/);
+
+      const content = readFileSync(outFile, "utf-8");
+      assert.ok(!content.includes("class "));
+    });
+  });
+
   describe("help", () => {
     it("shows usage when no args given", () => {
       const stdout = runCli();
