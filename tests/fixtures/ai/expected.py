@@ -534,7 +534,7 @@ class BaseAiTextGeneration:
 
     @property
     def inputs(self) -> AiTextGenerationInput:
-        return AiTextGenerationInput.from_js(self._binding.inputs)
+        return _auto_to_py(self._binding.inputs)
     
     @inputs.setter
     def inputs(self, value: AiTextGenerationInput) -> None:
@@ -917,154 +917,22 @@ class AiTextEmbeddingsOutput(TypedDict):
     data: list[list[int | float]]
 
 
-class AiTextGenerationInput:
-    _binding: Any
-
-    @classmethod
-    def from_js(cls, js_obj: JsProxy) -> AiTextGenerationInput:
-        instance = object.__new__(cls)
-        instance._binding = js_obj
-        return instance
-
-    @property
-    def js_object(self) -> JsProxy:
-        return self._binding
-
-    def __getattr__(self, name: str) -> Any:
-        return getattr(self._binding, name)
-
-    def __getitem__(self, key: str) -> Any:
-        return getattr(self, key)
-
-    def __setitem__(self, key: str, value: Any) -> None:
-        setattr(self, key, value)
-
-    def __eq__(self, other: Any) -> bool:
-        return isinstance(other, self.__class__) and self._binding == other._binding
-
-    def __hash__(self) -> int:
-        return id(self._binding)
-
-    @property
-    def prompt(self) -> str | None:
-        return _jsnull_to_none(self._binding.prompt)
-    
-    @prompt.setter
-    def prompt(self, value: str | None) -> None:
-        self._binding.prompt = value
-
-    @property
-    def raw(self) -> bool | None:
-        return _jsnull_to_none(self._binding.raw)
-    
-    @raw.setter
-    def raw(self, value: bool | None) -> None:
-        self._binding.raw = value
-
-    @property
-    def stream(self) -> bool | None:
-        return _jsnull_to_none(self._binding.stream)
-    
-    @stream.setter
-    def stream(self, value: bool | None) -> None:
-        self._binding.stream = value
-
-    @property
-    def max_tokens(self) -> int | float | None:
-        return _jsnull_to_none(self._binding.max_tokens)
-    
-    @max_tokens.setter
-    def max_tokens(self, value: int | float | None) -> None:
-        self._binding.max_tokens = value
-
-    @property
-    def temperature(self) -> int | float | None:
-        return _jsnull_to_none(self._binding.temperature)
-    
-    @temperature.setter
-    def temperature(self, value: int | float | None) -> None:
-        self._binding.temperature = value
-
-    @property
-    def top_p(self) -> int | float | None:
-        return _jsnull_to_none(self._binding.top_p)
-    
-    @top_p.setter
-    def top_p(self, value: int | float | None) -> None:
-        self._binding.top_p = value
-
-    @property
-    def top_k(self) -> int | float | None:
-        return _jsnull_to_none(self._binding.top_k)
-    
-    @top_k.setter
-    def top_k(self, value: int | float | None) -> None:
-        self._binding.top_k = value
-
-    @property
-    def seed(self) -> int | float | None:
-        return _jsnull_to_none(self._binding.seed)
-    
-    @seed.setter
-    def seed(self, value: int | float | None) -> None:
-        self._binding.seed = value
-
-    @property
-    def repetition_penalty(self) -> int | float | None:
-        return _jsnull_to_none(self._binding.repetition_penalty)
-    
-    @repetition_penalty.setter
-    def repetition_penalty(self, value: int | float | None) -> None:
-        self._binding.repetition_penalty = value
-
-    @property
-    def frequency_penalty(self) -> int | float | None:
-        return _jsnull_to_none(self._binding.frequency_penalty)
-    
-    @frequency_penalty.setter
-    def frequency_penalty(self, value: int | float | None) -> None:
-        self._binding.frequency_penalty = value
-
-    @property
-    def presence_penalty(self) -> int | float | None:
-        return _jsnull_to_none(self._binding.presence_penalty)
-    
-    @presence_penalty.setter
-    def presence_penalty(self, value: int | float | None) -> None:
-        self._binding.presence_penalty = value
-
-    @property
-    def messages(self) -> list[RoleScopedChatInput] | None:
-        return [_auto_to_py(e) for e in self._binding.messages]
-    
-    @messages.setter
-    def messages(self, value: list[RoleScopedChatInput] | None) -> None:
-        self._binding.messages = value
-
-    @property
-    def response_format(self) -> AiTextGenerationResponseFormat | None:
-        _v = _jsnull_to_none(self._binding.response_format)
-        return AiTextGenerationResponseFormat.from_js(_v) if _v is not None else None
-    
-    @response_format.setter
-    def response_format(self, value: AiTextGenerationResponseFormat | None) -> None:
-        self._binding.response_format = value
-
-    @property
-    def tools(self) -> list[AiTextGenerationToolInput] | list[AiTextGenerationToolLegacyInput] | (Any) | None:
-        return _jsnull_to_none(self._binding.tools)
-    
-    @tools.setter
-    def tools(self, value: list[AiTextGenerationToolInput] | list[AiTextGenerationToolLegacyInput] | (Any) | None) -> None:
-        self._binding.tools = value
-
-    @property
-    def functions(self) -> list[AiTextGenerationFunctionsInput] | None:
-        return [_auto_to_py(e) for e in self._binding.functions]
-    
-    @functions.setter
-    def functions(self, value: list[AiTextGenerationFunctionsInput] | None) -> None:
-        self._binding.functions = value
+class AiTextGenerationInput(TypedDict, total=False):
+    prompt: str
+    raw: bool
+    stream: bool
+    max_tokens: int | float
+    temperature: int | float
+    top_p: int | float
+    top_k: int | float
+    seed: int | float
+    repetition_penalty: int | float
+    frequency_penalty: int | float
+    presence_penalty: int | float
+    messages: list[RoleScopedChatInput]
+    response_format: AiTextGenerationResponseFormat
+    tools: list[AiTextGenerationToolInput] | list[AiTextGenerationToolLegacyInput] | (Any) | None
+    functions: list[AiTextGenerationFunctionsInput]
 
 
 class AiTextGenerationOutput(TypedDict, total=False):
@@ -1144,7 +1012,7 @@ class AiModelsSearchObject(TypedDict):
     source: int | float
     name: str
     description: str
-    task: Any
+    task: AiModelsSearchObjectTask
     tags: list[str]
     properties: list[Any]
     property_id: str
@@ -1173,211 +1041,20 @@ class RoleScopedChatInput(TypedDict):
     name: str | None
 
 
-class AiTextGenerationResponseFormat:
-    _binding: Any
-
-    @classmethod
-    def from_js(cls, js_obj: JsProxy) -> AiTextGenerationResponseFormat:
-        instance = object.__new__(cls)
-        instance._binding = js_obj
-        return instance
-
-    @property
-    def js_object(self) -> JsProxy:
-        return self._binding
-
-    def __getattr__(self, name: str) -> Any:
-        return getattr(self._binding, name)
-
-    def __getitem__(self, key: str) -> Any:
-        return getattr(self, key)
-
-    def __setitem__(self, key: str, value: Any) -> None:
-        setattr(self, key, value)
-
-    def __eq__(self, other: Any) -> bool:
-        return isinstance(other, self.__class__) and self._binding == other._binding
-
-    def __hash__(self) -> int:
-        return id(self._binding)
-
-    @property
-    def type_(self) -> str:
-        return getattr(self._binding, "type")
-    
-    @type_.setter
-    def type_(self, value: str) -> None:
-        setattr(self._binding, "type", value)
-
-    @property
-    def json_schema(self) -> Any | None:
-        return _jsnull_to_none(self._binding.json_schema)
-    
-    @json_schema.setter
-    def json_schema(self, value: Any | None) -> None:
-        self._binding.json_schema = value
+class AiTextGenerationResponseFormat(TypedDict):
+    type: str
+    json_schema: Any | None
 
 
-class AiTextGenerationToolInput:
-    _binding: Any
-
-    @classmethod
-    def from_js(cls, js_obj: JsProxy) -> AiTextGenerationToolInput:
-        instance = object.__new__(cls)
-        instance._binding = js_obj
-        return instance
-
-    @property
-    def js_object(self) -> JsProxy:
-        return self._binding
-
-    def __getattr__(self, name: str) -> Any:
-        return getattr(self._binding, name)
-
-    def __getitem__(self, key: str) -> Any:
-        return getattr(self, key)
-
-    def __setitem__(self, key: str, value: Any) -> None:
-        setattr(self, key, value)
-
-    def __eq__(self, other: Any) -> bool:
-        return isinstance(other, self.__class__) and self._binding == other._binding
-
-    def __hash__(self) -> int:
-        return id(self._binding)
-
-    @property
-    def type_(self) -> (Any) | Literal["function"]:
-        return getattr(self._binding, "type")
-    
-    @type_.setter
-    def type_(self, value: (Any) | Literal["function"]) -> None:
-        setattr(self._binding, "type", value)
-
-    @property
-    def function(self) -> Any:
-        return self._binding.function
-    
-    @function.setter
-    def function(self, value: Any) -> None:
-        self._binding.function = value
-
-    @property
-    def properties(self) -> Any:
-        return self._binding.properties
-    
-    @properties.setter
-    def properties(self, value: Any) -> None:
-        self._binding.properties = value
-
-    @property
-    def required(self) -> list[str]:
-        return self._binding.required
-    
-    @required.setter
-    def required(self, value: list[str]) -> None:
-        self._binding.required = value
-
-    @property
-    def name(self) -> str:
-        return self._binding.name
-    
-    @name.setter
-    def name(self, value: str) -> None:
-        self._binding.name = value
-
-    @property
-    def description(self) -> str:
-        return self._binding.description
-    
-    @description.setter
-    def description(self, value: str) -> None:
-        self._binding.description = value
-
-    @property
-    def parameters(self) -> Any | None:
-        return _jsnull_to_none(self._binding.parameters)
-    
-    @parameters.setter
-    def parameters(self, value: Any | None) -> None:
-        self._binding.parameters = value
+class AiTextGenerationToolInput(TypedDict):
+    type: (Any) | Literal["function"]
+    function: AiTextGenerationToolInputFunction
 
 
-class AiTextGenerationToolLegacyInput:
-    _binding: Any
-
-    @classmethod
-    def from_js(cls, js_obj: JsProxy) -> AiTextGenerationToolLegacyInput:
-        instance = object.__new__(cls)
-        instance._binding = js_obj
-        return instance
-
-    @property
-    def js_object(self) -> JsProxy:
-        return self._binding
-
-    def __getattr__(self, name: str) -> Any:
-        return getattr(self._binding, name)
-
-    def __getitem__(self, key: str) -> Any:
-        return getattr(self, key)
-
-    def __setitem__(self, key: str, value: Any) -> None:
-        setattr(self, key, value)
-
-    def __eq__(self, other: Any) -> bool:
-        return isinstance(other, self.__class__) and self._binding == other._binding
-
-    def __hash__(self) -> int:
-        return id(self._binding)
-
-    @property
-    def name(self) -> str:
-        return self._binding.name
-    
-    @name.setter
-    def name(self, value: str) -> None:
-        self._binding.name = value
-
-    @property
-    def description(self) -> str:
-        return self._binding.description
-    
-    @description.setter
-    def description(self, value: str) -> None:
-        self._binding.description = value
-
-    @property
-    def parameters(self) -> Any | None:
-        return _jsnull_to_none(self._binding.parameters)
-    
-    @parameters.setter
-    def parameters(self, value: Any | None) -> None:
-        self._binding.parameters = value
-
-    @property
-    def type_(self) -> (Any) | Literal["object"]:
-        return getattr(self._binding, "type")
-    
-    @type_.setter
-    def type_(self, value: (Any) | Literal["object"]) -> None:
-        setattr(self._binding, "type", value)
-
-    @property
-    def properties(self) -> Any:
-        return self._binding.properties
-    
-    @properties.setter
-    def properties(self, value: Any) -> None:
-        self._binding.properties = value
-
-    @property
-    def required(self) -> list[str]:
-        return self._binding.required
-    
-    @required.setter
-    def required(self, value: list[str]) -> None:
-        self._binding.required = value
+class AiTextGenerationToolLegacyInput(TypedDict):
+    name: str
+    description: str
+    parameters: AiTextGenerationToolLegacyInputParameters | None
 
 
 class AiTextGenerationFunctionsInput(TypedDict):
@@ -1390,73 +1067,10 @@ class AiTextGenerationToolLegacyOutput(TypedDict):
     arguments: Any
 
 
-class AiTextGenerationToolOutput:
-    _binding: Any
-
-    @classmethod
-    def from_js(cls, js_obj: JsProxy) -> AiTextGenerationToolOutput:
-        instance = object.__new__(cls)
-        instance._binding = js_obj
-        return instance
-
-    @property
-    def js_object(self) -> JsProxy:
-        return self._binding
-
-    def __getattr__(self, name: str) -> Any:
-        return getattr(self._binding, name)
-
-    def __getitem__(self, key: str) -> Any:
-        return getattr(self, key)
-
-    def __setitem__(self, key: str, value: Any) -> None:
-        setattr(self, key, value)
-
-    def __eq__(self, other: Any) -> bool:
-        return isinstance(other, self.__class__) and self._binding == other._binding
-
-    def __hash__(self) -> int:
-        return id(self._binding)
-
-    @property
-    def id(self) -> str:
-        return self._binding.id
-    
-    @id.setter
-    def id(self, value: str) -> None:
-        self._binding.id = value
-
-    @property
-    def type_(self) -> Literal["function"]:
-        return getattr(self._binding, "type")
-    
-    @type_.setter
-    def type_(self, value: Literal["function"]) -> None:
-        setattr(self._binding, "type", value)
-
-    @property
-    def function(self) -> Any:
-        return self._binding.function
-    
-    @function.setter
-    def function(self, value: Any) -> None:
-        self._binding.function = value
-
-    @property
-    def name(self) -> str:
-        return self._binding.name
-    
-    @name.setter
-    def name(self, value: str) -> None:
-        self._binding.name = value
-
-    @property
-    def arguments(self) -> str:
-        return self._binding.arguments
-    
-    @arguments.setter
-    def arguments(self, value: str) -> None:
-        self._binding.arguments = value
+class AiTextGenerationToolOutput(TypedDict):
+    id: str
+    type: Literal["function"]
+    function: AiTextGenerationToolOutputFunction
 
 
 class UsageTags(TypedDict):
@@ -1472,18 +1086,14 @@ class GatewayRetries(TypedDict, total=False):
 
 
 class ConversionOptions(TypedDict, total=False):
-    html: Any
-    docx: Any
+    html: ConversionOptionsHtml
+    docx: ConversionOptionsDocx
     image: ImageConversionOptions
-    pdf: Any
+    pdf: ConversionOptionsPdf
     descriptionLanguage: Literal["en", "es", "fr", "it", "pt", "de"] | None
     convert: bool
     maxConvertedImages: int | float
     convertOGImage: bool
-    images: Any | EmbeddedImageConversionOptions | EmbeddedImageConversionOptions
-    hostname: str
-    cssSelector: str
-    metadata: bool
 
 
 class EmbeddedImageConversionOptions(TypedDict, total=False):
@@ -1515,6 +1125,12 @@ class AiTextToSpeechOutput(TypedDict):
     audio: str
 
 
+class AiModelsSearchObjectTask(TypedDict):
+    id: str
+    name: str
+    description: str
+
+
 class ConversionResponse(TypedDict):
     id: str
     name: str
@@ -1523,3 +1139,41 @@ class ConversionResponse(TypedDict):
     tokens: int | float | None
     data: str | None
     error: str | None
+
+
+class AiTextGenerationToolInputFunctionParameters(TypedDict):
+    type: (Any) | Literal["object"]
+    properties: Any
+    required: list[str]
+
+
+class AiTextGenerationToolInputFunction(TypedDict):
+    name: str
+    description: str
+    parameters: AiTextGenerationToolInputFunctionParameters | None
+
+
+class AiTextGenerationToolLegacyInputParameters(TypedDict):
+    type: (Any) | Literal["object"]
+    properties: Any
+    required: list[str]
+
+
+class AiTextGenerationToolOutputFunction(TypedDict):
+    name: str
+    arguments: str
+
+
+class ConversionOptionsHtml(TypedDict, total=False):
+    images: Any
+    hostname: str
+    cssSelector: str
+
+
+class ConversionOptionsDocx(TypedDict, total=False):
+    images: EmbeddedImageConversionOptions
+
+
+class ConversionOptionsPdf(TypedDict, total=False):
+    images: EmbeddedImageConversionOptions
+    metadata: bool

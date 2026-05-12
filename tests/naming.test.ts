@@ -44,10 +44,10 @@ describe("sanitizePythonName", () => {
     ["del", "del_"],
     ["class", "class_"],
     ["import", "import_"],
-    ["type", "type_"],
+    ["type", "type"],
     ["float", "float"],
-    ["match", "match_"],
-    ["case", "case_"],
+    ["match", "match"],
+    ["case", "case"],
     ["normal_name", "normal_name"],
   ];
 

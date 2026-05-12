@@ -292,33 +292,23 @@ class ImageInputOptions(TypedDict, total=False):
     encoding: Literal["base64"]
 
 
-class ImageTransform(TypedDict):
-    width: int | float | None
-    height: int | float | None
-    background: str | None
-    blur: int | float | None
-    border: Any | None
-    brightness: int | float | None
-    contrast: int | float | None
+class ImageTransform(TypedDict, total=False):
+    width: int | float
+    height: int | float
+    background: str
+    blur: int | float
+    border: ImageTransformBorder | None
+    brightness: int | float
+    contrast: int | float
     fit: Literal["scale-down", "contain", "pad", "squeeze", "cover", "crop"] | None
     flip: Literal["h", "v", "hv"] | None
-    gamma: int | float | None
-    segment: Literal["foreground"] | None
-    gravity: Any | Literal["face", "left", "right", "top", "bottom", "center", "auto", "entropy"] | None
+    gamma: int | float
+    segment: Literal["foreground"]
+    gravity: ImageTransformGravity | Literal["face", "left", "right", "top", "bottom", "center", "auto", "entropy"] | None
     rotate: Literal[0, 90, 180, 270] | None
-    saturation: int | float | None
-    sharpen: int | float | None
-    trim: Any | Literal["border"] | None
-    color: str | None
-    top: int | float | None
-    bottom: int | float | None
-    left: int | float | None
-    right: int | float | None
-    x: int | float | None
-    y: int | float | None
-    mode: Literal["remainder", "box-center"]
-    tolerance: int | float | None
-    keep: int | float | None
+    saturation: int | float
+    sharpen: int | float
+    trim: ImageTransformTrim | Literal["border"] | None
 
 
 class ImageDrawOptions(TypedDict, total=False):
@@ -346,3 +336,34 @@ class ImageInfoResponse(TypedDict):
     fileSize: int | float | None
     width: int | float | None
     height: int | float | None
+
+
+class ImageTransformBorder(TypedDict, total=False):
+    color: str
+    width: int | float
+    top: int | float
+    bottom: int | float
+    left: int | float
+    right: int | float
+
+
+class ImageTransformGravity(TypedDict):
+    x: int | float | None
+    y: int | float | None
+    mode: Literal["remainder", "box-center"]
+
+
+class ImageTransformTrimBorder(TypedDict, total=False):
+    color: str
+    tolerance: int | float
+    keep: int | float
+
+
+class ImageTransformTrim(TypedDict, total=False):
+    top: int | float
+    bottom: int | float
+    left: int | float
+    right: int | float
+    width: int | float
+    height: int | float
+    border: bool | ImageTransformTrimBorder | None
