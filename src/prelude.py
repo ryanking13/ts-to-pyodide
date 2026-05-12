@@ -4,6 +4,20 @@ from typing import Any, Literal, Never, TypedDict, overload
 import js
 from pyodide.ffi import JsBuffer, JsProxy, create_proxy, to_js as _raw_to_js
 
+try:
+    from pyodide.ffi import jsnull as _JSNULL
+except ImportError:
+    _JSNULL = None
+
+__all__ = [
+    "Any", "Literal", "Never", "TypedDict", "overload",
+    "js", "JsBuffer", "JsProxy", "create_proxy", "to_js",
+    "datetime", "timezone",
+    "_jsnull_to_none", "_auto_to_py", "_none_to_jsnull",
+    "_to_js_date", "_from_js_date",
+    "Headers",
+]
+
 def to_js(obj: Any, **kwargs: Any) -> Any:
     if hasattr(obj, "_binding"):
         return obj._binding
@@ -12,11 +26,7 @@ def to_js(obj: Any, **kwargs: Any) -> Any:
     return _raw_to_js(obj, **kwargs)
 
 def _jsnull_to_none(value: Any) -> Any:
-    try:
-        from pyodide.ffi import jsnull
-    except ImportError:
-        return value
-    if value is jsnull:
+    if _JSNULL is not None and value is _JSNULL:
         return None
     return value
 
@@ -33,12 +43,8 @@ def _auto_to_py(value: Any) -> Any:
     return value
 
 def _none_to_jsnull(value: Any) -> Any:
-    if value is None:
-        try:
-            from pyodide.ffi import jsnull
-            return jsnull
-        except ImportError:
-            return value
+    if value is None and _JSNULL is not None:
+        return _JSNULL
     return value
 
 def _to_js_date(dt: datetime | JsProxy) -> JsProxy:
@@ -117,7 +123,7 @@ class Headers:
         return f"Headers({self.to_dict()!r})"
 
     def __eq__(self, other: Any) -> bool:
-        return isinstance(other, Headers) and self.to_dict() == other.to_dict()
+        return isinstance(other, Headers) and self._binding == other._binding
 
     def __hash__(self) -> int:
         return id(self._binding)

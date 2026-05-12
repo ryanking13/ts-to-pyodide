@@ -41,14 +41,7 @@ const PRELUDE_PATH = resolve(__dirname, "prelude.py");
 
 const IMPORT_HEADER = `\
 from __future__ import annotations
-from prelude import (  # noqa: F401
-    Any, Literal, Never, TypedDict, overload,
-    js, JsBuffer, JsProxy, create_proxy, to_js,
-    datetime, timezone,
-    _jsnull_to_none, _auto_to_py, _none_to_jsnull,
-    _to_js_date, _from_js_date,
-    Headers,
-)
+from prelude import *
 `;
 
 /**
@@ -762,9 +755,6 @@ export class Renderer {
     const wrapperClass = resolveKnownInterface(param.type, this.knownInterfaces);
     if (wrapperClass && !this.dataBagNames.has(wrapperClass)) {
       if (PRELUDE_CLASSES.has(wrapperClass)) {
-        if (param.isOptional) {
-          return `${name}.js_object if isinstance(${name}, ${wrapperClass}) else ${name}`;
-        }
         return `${name}.js_object if isinstance(${name}, ${wrapperClass}) else ${name}`;
       }
       if (param.isOptional) {
