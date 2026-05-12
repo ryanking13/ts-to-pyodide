@@ -378,8 +378,11 @@ function adjustIR(topLevels: TopLevels): void {
   }
 }
 
-export function convertToIR(files: SourceFile[]): ConversionResult {
-  const result = convertFiles(files);
+export function convertToIR(
+  files: SourceFile[],
+  seedInterfaces?: string[],
+): ConversionResult {
+  const result = convertFiles(files, seedInterfaces);
   adjustIR(result.topLevels);
   return result;
 }

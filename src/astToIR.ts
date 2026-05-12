@@ -1478,7 +1478,10 @@ export type ConversionResult = {
   topLevels: TopLevels;
 };
 
-export function convertFiles(files: SourceFile[]): ConversionResult {
+export function convertFiles(
+  files: SourceFile[],
+  seedInterfaces?: string[],
+): ConversionResult {
   const varDecls = files.flatMap((file) => file.getVariableDeclarations());
   const funcDecls = files.flatMap((file) => file.getFunctions());
   const classDecls = files.flatMap((file) => file.getClasses());
@@ -1498,7 +1501,20 @@ export function convertFiles(files: SourceFile[]): ConversionResult {
   const cf = files.filter(
     (file) => file.getBaseName() === "worker-configuration.d.ts",
   );
-  return convertDecls(varDecls, funcDecls, classDecls, cf[0]);
+
+  const seedIfaceDecls: [string, InterfaceDeclaration[]][] = [];
+  if (seedInterfaces) {
+    for (const name of seedInterfaces) {
+      const defs = files.flatMap((f) =>
+        f.getInterfaces().filter((i) => i.getName() === name),
+      );
+      if (defs.length > 0) {
+        seedIfaceDecls.push([name + "_iface", defs]);
+      }
+    }
+  }
+
+  return convertDecls(varDecls, funcDecls, classDecls, cf[0], seedIfaceDecls);
 }
 
 export function convertDecls(
@@ -1506,6 +1522,7 @@ export function convertDecls(
   funcDecls: FunctionDeclaration[],
   classDecls: ClassDeclaration[],
   cf: SourceFile | undefined = undefined,
+  seedIfaceDecls: [string, InterfaceDeclaration[]][] = [],
 ): ConversionResult {
   const converter = new Converter();
   const topLevels: TopLevels = {
@@ -1546,6 +1563,13 @@ export function convertDecls(
     pushInterface("Env", cf.getModule("Cloudflare")?.getInterface("Env"));
     pushInterface("ExecutionContext", cf.getInterface("ExecutionContext"));
     pushInterface("DurableObjectState", cf.getInterface("DurableObjectState"));
+  }
+
+  for (const [name, defs] of seedIfaceDecls) {
+    if (!converter.convertedSet.has(name)) {
+      converter.convertedSet.add(name);
+      pushTopLevel(converter.topLevelInterfaceToIR(name, defs));
+    }
   }
 
   for (const varDecl of varDecls) {
