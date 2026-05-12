@@ -30,39 +30,6 @@ def _auto_to_py(value: Any) -> Any:
         return [_auto_to_py(_jsnull_to_none(v)) for v in value]
     return value
 
-def _to_camel(s: str) -> str:
-    parts = s.split("_")
-    return parts[0] + "".join(p.capitalize() for p in parts[1:])
-
-def _to_snake(s: str) -> str:
-    import re
-    return re.sub(r"([a-z0-9])([A-Z])", r"\1_\2", s).lower()
-
-def _to_js_opts(opts: Any) -> Any:
-    if opts is None:
-        return None
-    def _convert(v: Any) -> Any:
-        if isinstance(v, dict):
-            return {_to_camel(k): _convert(val) for k, val in v.items() if val is not None}
-        if isinstance(v, list):
-            return [_convert(item) for item in v]
-        return v
-    return to_js(_convert(opts))
-
-def _from_js_opts(js_obj: Any) -> Any:
-    if js_obj is None:
-        return None
-    def _convert(v: Any) -> Any:
-        v = _jsnull_to_none(v)
-        if v is None:
-            return None
-        if isinstance(v, dict):
-            return {_to_snake(k): _convert(val) for k, val in v.items()}
-        if isinstance(v, list):
-            return [_convert(item) for item in v]
-        return v
-    return _convert(js_obj.to_py())
-
 def _none_to_jsnull(value: Any) -> Any:
     if value is None:
         try:
@@ -103,20 +70,14 @@ class Queue:
     def __getattr__(self, name: str) -> Any:
         return getattr(self._binding, name)
 
-    def __getitem__(self, key: str) -> Any:
-        return getattr(self, _to_snake(key))
-
-    def __setitem__(self, key: str, value: Any) -> None:
-        setattr(self, _to_snake(key), value)
-
     async def metrics(self) -> QueueMetrics:
-        return _from_js_opts(await self._binding.metrics())
+        return _auto_to_py(await self._binding.metrics())
 
     async def send(self, message: Any, options: QueueSendOptions | None = None) -> QueueSendResponse:
-        return _from_js_opts(await self._binding.send(to_js(_none_to_jsnull(message)), _to_js_opts(options)))
+        return _auto_to_py(await self._binding.send(to_js(_none_to_jsnull(message)), to_js(options)))
 
     async def send_batch(self, messages: Any, options: QueueSendBatchOptions | None = None) -> QueueSendBatchResponse:
-        return _from_js_opts(await self._binding.sendBatch(to_js(messages), _to_js_opts(options)))
+        return _auto_to_py(await self._binding.sendBatch(to_js(messages), to_js(options)))
 
 
 class MessageBatch:
@@ -135,12 +96,6 @@ class MessageBatch:
     def __getattr__(self, name: str) -> Any:
         return getattr(self._binding, name)
 
-    def __getitem__(self, key: str) -> Any:
-        return getattr(self, _to_snake(key))
-
-    def __setitem__(self, key: str, value: Any) -> None:
-        setattr(self, _to_snake(key), value)
-
     @property
     def messages(self) -> list[Message]:
         return [Message.from_js(e) for e in self._binding.messages]
@@ -151,24 +106,24 @@ class MessageBatch:
 
     @property
     def metadata(self) -> MessageBatchMetadata:
-        return _from_js_opts(self._binding.metadata)
+        return _auto_to_py(self._binding.metadata)
 
     def retry_all(self, options: QueueRetryOptions | None = None) -> None:
-        self._binding.retryAll(_to_js_opts(options))
+        self._binding.retryAll(to_js(options))
 
     def ack_all(self) -> None:
         self._binding.ackAll()
 
 
 class QueueMetrics(TypedDict):
-    backlog_count: int | float
-    backlog_bytes: int | float
-    oldest_message_timestamp: datetime | None
+    backlogCount: int | float
+    backlogBytes: int | float
+    oldestMessageTimestamp: datetime | None
 
 
 class QueueSendOptions(TypedDict, total=False):
-    content_type: Literal["text", "bytes", "json", "v8"]
-    delay_seconds: int | float
+    contentType: Literal["text", "bytes", "json", "v8"]
+    delaySeconds: int | float
 
 
 class QueueSendResponse(TypedDict):
@@ -177,12 +132,12 @@ class QueueSendResponse(TypedDict):
 
 class MessageSendRequest(TypedDict):
     body: Any
-    content_type: Literal["text", "bytes", "json", "v8"] | None
-    delay_seconds: int | float | None
+    contentType: Literal["text", "bytes", "json", "v8"] | None
+    delaySeconds: int | float | None
 
 
 class QueueSendBatchOptions(TypedDict, total=False):
-    delay_seconds: int | float
+    delaySeconds: int | float
 
 
 class QueueSendBatchResponse(TypedDict):
@@ -190,7 +145,7 @@ class QueueSendBatchResponse(TypedDict):
 
 
 class QueueRetryOptions(TypedDict, total=False):
-    delay_seconds: int | float
+    delaySeconds: int | float
 
 
 class Message:
@@ -209,12 +164,6 @@ class Message:
     def __getattr__(self, name: str) -> Any:
         return getattr(self._binding, name)
 
-    def __getitem__(self, key: str) -> Any:
-        return getattr(self, _to_snake(key))
-
-    def __setitem__(self, key: str, value: Any) -> None:
-        setattr(self, _to_snake(key), value)
-
     @property
     def id(self) -> str:
         return self._binding.id
@@ -232,7 +181,7 @@ class Message:
         return self._binding.attempts
 
     def retry(self, options: QueueRetryOptions | None = None) -> None:
-        self._binding.retry(_to_js_opts(options))
+        self._binding.retry(to_js(options))
 
     def ack(self) -> None:
         self._binding.ack()
@@ -251,18 +200,18 @@ class QueueSendBatchMetadata(TypedDict):
 
 
 class MessageBatchMetrics(TypedDict):
-    backlog_count: int | float
-    backlog_bytes: int | float
-    oldest_message_timestamp: datetime | None
+    backlogCount: int | float
+    backlogBytes: int | float
+    oldestMessageTimestamp: datetime | None
 
 
 class QueueSendMetrics(TypedDict):
-    backlog_count: int | float
-    backlog_bytes: int | float
-    oldest_message_timestamp: datetime | None
+    backlogCount: int | float
+    backlogBytes: int | float
+    oldestMessageTimestamp: datetime | None
 
 
 class QueueSendBatchMetrics(TypedDict):
-    backlog_count: int | float
-    backlog_bytes: int | float
-    oldest_message_timestamp: datetime | None
+    backlogCount: int | float
+    backlogBytes: int | float
+    oldestMessageTimestamp: datetime | None

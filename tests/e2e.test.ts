@@ -148,6 +148,26 @@ describe("e2e: Vectorize (.d.ts → IR → renderFile)", () => {
   });
 });
 
+describe("e2e: AI (.d.ts → IR → renderFile)", () => {
+  it("ai: declare class, overloaded run simplified, TypedDict options, array return", () => {
+    const inputDts = readFileSync(
+      resolve(FIXTURES_DIR, "ai", "input.d.ts"),
+      "utf-8",
+    );
+    const expectedPy = readFileSync(
+      resolve(FIXTURES_DIR, "ai", "expected.py"),
+      "utf-8",
+    );
+
+    const project = makeProject();
+    project.createSourceFile("/fixture.d.ts", inputDts);
+    const result = convertToIR([project.getSourceFileOrThrow("/fixture.d.ts")]);
+
+    const output = renderer.renderFile(result.topLevels.ifaces);
+    assert.strictEqual(output, expectedPy);
+  });
+});
+
 describe("e2e: Queue (.d.ts → IR → renderFile)", () => {
   it("queue: generic interfaces, literal types, TypedDict options, sub-binding wrapping, readonly props", () => {
     const inputDts = readFileSync(

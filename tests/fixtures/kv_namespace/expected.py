@@ -30,39 +30,6 @@ def _auto_to_py(value: Any) -> Any:
         return [_auto_to_py(_jsnull_to_none(v)) for v in value]
     return value
 
-def _to_camel(s: str) -> str:
-    parts = s.split("_")
-    return parts[0] + "".join(p.capitalize() for p in parts[1:])
-
-def _to_snake(s: str) -> str:
-    import re
-    return re.sub(r"([a-z0-9])([A-Z])", r"\1_\2", s).lower()
-
-def _to_js_opts(opts: Any) -> Any:
-    if opts is None:
-        return None
-    def _convert(v: Any) -> Any:
-        if isinstance(v, dict):
-            return {_to_camel(k): _convert(val) for k, val in v.items() if val is not None}
-        if isinstance(v, list):
-            return [_convert(item) for item in v]
-        return v
-    return to_js(_convert(opts))
-
-def _from_js_opts(js_obj: Any) -> Any:
-    if js_obj is None:
-        return None
-    def _convert(v: Any) -> Any:
-        v = _jsnull_to_none(v)
-        if v is None:
-            return None
-        if isinstance(v, dict):
-            return {_to_snake(k): _convert(val) for k, val in v.items()}
-        if isinstance(v, list):
-            return [_convert(item) for item in v]
-        return v
-    return _convert(js_obj.to_py())
-
 def _none_to_jsnull(value: Any) -> Any:
     if value is None:
         try:
@@ -103,18 +70,12 @@ class KVNamespace:
     def __getattr__(self, name: str) -> Any:
         return getattr(self._binding, name)
 
-    def __getitem__(self, key: str) -> Any:
-        return getattr(self, _to_snake(key))
-
-    def __setitem__(self, key: str, value: Any) -> None:
-        setattr(self, _to_snake(key), value)
-
     async def get(self, *args: Any, **kwargs: Any) -> Any:
         _a = list(args)
         if len(_a) > 0:
             _a[0] = to_js(_a[0])
-        if len(_a) > 1 and isinstance(_a[1], dict):
-            _a[1] = _to_js_opts(_a[1])
+        if len(_a) > 1:
+            _a[1] = to_js(_a[1])
         _r = await self._binding.get(*_a, **kwargs)
         if isinstance(args[0], str):
             return _auto_to_py(_jsnull_to_none(_r))
@@ -123,20 +84,20 @@ class KVNamespace:
         return _r
 
     async def list(self, options: KVNamespaceListOptions | None = None) -> KVNamespaceListResult:
-        return _from_js_opts(await self._binding.list(_to_js_opts(options)))
+        return _auto_to_py(await self._binding.list(to_js(options)))
 
     async def put(self, key: str, value: str | JsBuffer | Any, options: KVNamespacePutOptions | None = None) -> None:
-        await self._binding.put(key, to_js(value), _to_js_opts(options))
+        await self._binding.put(key, to_js(value), to_js(options))
 
     async def get_with_metadata(self, *args: Any, **kwargs: Any) -> Any:
         _a = list(args)
         if len(_a) > 0:
             _a[0] = to_js(_a[0])
-        if len(_a) > 1 and isinstance(_a[1], dict):
-            _a[1] = _to_js_opts(_a[1])
+        if len(_a) > 1:
+            _a[1] = to_js(_a[1])
         _r = await self._binding.getWithMetadata(*_a, **kwargs)
         if isinstance(args[0], str):
-            return _from_js_opts(_r)
+            return _auto_to_py(_r)
         elif isinstance(args[0], list):
             return _auto_to_py(_r)
         return _r
@@ -145,9 +106,37 @@ class KVNamespace:
         await self._binding.delete(key)
 
 
-class KVNamespaceGetOptions(TypedDict):
-    type_: Any
-    cache_ttl: int | float | None
+class KVNamespaceGetOptions:
+    _binding: Any
+
+    @classmethod
+    def from_js(cls, js_obj: JsProxy) -> KVNamespaceGetOptions:
+        instance = object.__new__(cls)
+        instance._binding = js_obj
+        return instance
+
+    @property
+    def js_object(self) -> JsProxy:
+        return self._binding
+
+    def __getattr__(self, name: str) -> Any:
+        return getattr(self._binding, name)
+
+    @property
+    def type_(self) -> Any:
+        return _auto_to_py(_jsnull_to_none(getattr(self._binding, "type")))
+    
+    @type_.setter
+    def type_(self, value: Any) -> None:
+        setattr(self._binding, "type", value)
+
+    @property
+    def cache_ttl(self) -> int | float | None:
+        return _jsnull_to_none(self._binding.cacheTtl)
+    
+    @cache_ttl.setter
+    def cache_ttl(self, value: int | float | None) -> None:
+        self._binding.cacheTtl = value
 
 
 class KVNamespaceListOptions(TypedDict, total=False):
@@ -158,14 +147,14 @@ class KVNamespaceListOptions(TypedDict, total=False):
 
 class KVNamespacePutOptions(TypedDict, total=False):
     expiration: int | float
-    expiration_ttl: int | float
+    expirationTtl: int | float
     metadata: Any | None
 
 
 class KVNamespaceGetWithMetadataResult(TypedDict):
     value: Any | None
     metadata: Any | None
-    cache_status: str | None
+    cacheStatus: str | None
 
 
 class KVNamespaceListKey(TypedDict):
@@ -178,4 +167,4 @@ class KVNamespaceListResult(TypedDict):
     list_complete: bool
     keys: list[KVNamespaceListKey]
     cursor: str | None
-    cache_status: str | None
+    cacheStatus: str | None

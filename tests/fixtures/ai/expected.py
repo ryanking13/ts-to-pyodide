@@ -1,0 +1,1261 @@
+from __future__ import annotations
+from datetime import datetime, timezone
+from typing import Any, Literal, Never, TypedDict, overload
+import js
+from pyodide.ffi import JsBuffer, JsProxy, create_proxy, to_js as _raw_to_js
+
+def to_js(obj: Any, **kwargs: Any) -> Any:
+    if "dict_converter" not in kwargs:
+        kwargs["dict_converter"] = js.Object.fromEntries
+    return _raw_to_js(obj, **kwargs)
+
+def _jsnull_to_none(value: Any) -> Any:
+    try:
+        from pyodide.ffi import jsnull
+    except ImportError:
+        return value
+    if value is jsnull:
+        return None
+    return value
+
+def _auto_to_py(value: Any) -> Any:
+    if isinstance(value, JsProxy):
+        try:
+            value = value.to_py()
+        except Exception:
+            return value
+    if isinstance(value, dict):
+        return {k: _auto_to_py(_jsnull_to_none(v)) for k, v in value.items()}
+    if isinstance(value, list):
+        return [_auto_to_py(_jsnull_to_none(v)) for v in value]
+    return value
+
+def _none_to_jsnull(value: Any) -> Any:
+    if value is None:
+        try:
+            from pyodide.ffi import jsnull
+            return jsnull
+        except ImportError:
+            return value
+    return value
+
+def _to_js_headers(headers: dict[str, str] | list[tuple[str, str]] | JsProxy) -> JsProxy:
+    if isinstance(headers, dict):
+        return js.Headers.new(list(headers.items()))
+    elif isinstance(headers, list):
+        return js.Headers.new(headers)
+    return headers
+
+def _to_js_date(dt: datetime | JsProxy) -> JsProxy:
+    if isinstance(dt, JsProxy):
+        return dt
+    return js.Date.new(int(dt.timestamp() * 1000))
+
+def _from_js_date(js_date: Any) -> datetime:
+    return datetime.fromtimestamp(js_date.getTime() / 1000, tz=timezone.utc)
+
+class BaseAiImageClassification:
+    _binding: Any
+
+    @classmethod
+    def from_js(cls, js_obj: JsProxy) -> BaseAiImageClassification:
+        instance = object.__new__(cls)
+        instance._binding = js_obj
+        return instance
+
+    @property
+    def js_object(self) -> JsProxy:
+        return self._binding
+
+    def __getattr__(self, name: str) -> Any:
+        return getattr(self._binding, name)
+
+    @property
+    def inputs(self) -> AiImageClassificationInput:
+        return _auto_to_py(self._binding.inputs)
+    
+    @inputs.setter
+    def inputs(self, value: AiImageClassificationInput) -> None:
+        self._binding.inputs = value
+
+    @property
+    def post_processed_outputs(self) -> AiImageClassificationOutput:
+        return _auto_to_py(self._binding.postProcessedOutputs)
+    
+    @post_processed_outputs.setter
+    def post_processed_outputs(self, value: AiImageClassificationOutput) -> None:
+        self._binding.postProcessedOutputs = value
+
+
+class BaseAiImageToText:
+    _binding: Any
+
+    @classmethod
+    def from_js(cls, js_obj: JsProxy) -> BaseAiImageToText:
+        instance = object.__new__(cls)
+        instance._binding = js_obj
+        return instance
+
+    @property
+    def js_object(self) -> JsProxy:
+        return self._binding
+
+    def __getattr__(self, name: str) -> Any:
+        return getattr(self._binding, name)
+
+    @property
+    def inputs(self) -> AiImageToTextInput:
+        return _auto_to_py(self._binding.inputs)
+    
+    @inputs.setter
+    def inputs(self, value: AiImageToTextInput) -> None:
+        self._binding.inputs = value
+
+    @property
+    def post_processed_outputs(self) -> AiImageToTextOutput:
+        return _auto_to_py(self._binding.postProcessedOutputs)
+    
+    @post_processed_outputs.setter
+    def post_processed_outputs(self, value: AiImageToTextOutput) -> None:
+        self._binding.postProcessedOutputs = value
+
+
+class BaseAiImageTextToText:
+    _binding: Any
+
+    @classmethod
+    def from_js(cls, js_obj: JsProxy) -> BaseAiImageTextToText:
+        instance = object.__new__(cls)
+        instance._binding = js_obj
+        return instance
+
+    @property
+    def js_object(self) -> JsProxy:
+        return self._binding
+
+    def __getattr__(self, name: str) -> Any:
+        return getattr(self._binding, name)
+
+    @property
+    def inputs(self) -> AiImageTextToTextInput:
+        return _auto_to_py(self._binding.inputs)
+    
+    @inputs.setter
+    def inputs(self, value: AiImageTextToTextInput) -> None:
+        self._binding.inputs = value
+
+    @property
+    def post_processed_outputs(self) -> AiImageTextToTextOutput:
+        return _auto_to_py(self._binding.postProcessedOutputs)
+    
+    @post_processed_outputs.setter
+    def post_processed_outputs(self, value: AiImageTextToTextOutput) -> None:
+        self._binding.postProcessedOutputs = value
+
+
+class BaseAiMultimodalEmbeddings:
+    _binding: Any
+
+    @classmethod
+    def from_js(cls, js_obj: JsProxy) -> BaseAiMultimodalEmbeddings:
+        instance = object.__new__(cls)
+        instance._binding = js_obj
+        return instance
+
+    @property
+    def js_object(self) -> JsProxy:
+        return self._binding
+
+    def __getattr__(self, name: str) -> Any:
+        return getattr(self._binding, name)
+
+    @property
+    def inputs(self) -> AiImageTextToTextInput:
+        return _auto_to_py(self._binding.inputs)
+    
+    @inputs.setter
+    def inputs(self, value: AiImageTextToTextInput) -> None:
+        self._binding.inputs = value
+
+    @property
+    def post_processed_outputs(self) -> AiImageTextToTextOutput:
+        return _auto_to_py(self._binding.postProcessedOutputs)
+    
+    @post_processed_outputs.setter
+    def post_processed_outputs(self, value: AiImageTextToTextOutput) -> None:
+        self._binding.postProcessedOutputs = value
+
+
+class BaseAiObjectDetection:
+    _binding: Any
+
+    @classmethod
+    def from_js(cls, js_obj: JsProxy) -> BaseAiObjectDetection:
+        instance = object.__new__(cls)
+        instance._binding = js_obj
+        return instance
+
+    @property
+    def js_object(self) -> JsProxy:
+        return self._binding
+
+    def __getattr__(self, name: str) -> Any:
+        return getattr(self._binding, name)
+
+    @property
+    def inputs(self) -> AiObjectDetectionInput:
+        return _auto_to_py(self._binding.inputs)
+    
+    @inputs.setter
+    def inputs(self, value: AiObjectDetectionInput) -> None:
+        self._binding.inputs = value
+
+    @property
+    def post_processed_outputs(self) -> AiObjectDetectionOutput:
+        return _auto_to_py(self._binding.postProcessedOutputs)
+    
+    @post_processed_outputs.setter
+    def post_processed_outputs(self, value: AiObjectDetectionOutput) -> None:
+        self._binding.postProcessedOutputs = value
+
+
+class BaseAiSentenceSimilarity:
+    _binding: Any
+
+    @classmethod
+    def from_js(cls, js_obj: JsProxy) -> BaseAiSentenceSimilarity:
+        instance = object.__new__(cls)
+        instance._binding = js_obj
+        return instance
+
+    @property
+    def js_object(self) -> JsProxy:
+        return self._binding
+
+    def __getattr__(self, name: str) -> Any:
+        return getattr(self._binding, name)
+
+    @property
+    def inputs(self) -> AiSentenceSimilarityInput:
+        return _auto_to_py(self._binding.inputs)
+    
+    @inputs.setter
+    def inputs(self, value: AiSentenceSimilarityInput) -> None:
+        self._binding.inputs = value
+
+    @property
+    def post_processed_outputs(self) -> Any:
+        return self._binding.postProcessedOutputs
+    
+    @post_processed_outputs.setter
+    def post_processed_outputs(self, value: Any) -> None:
+        self._binding.postProcessedOutputs = value
+
+
+class BaseAiAutomaticSpeechRecognition:
+    _binding: Any
+
+    @classmethod
+    def from_js(cls, js_obj: JsProxy) -> BaseAiAutomaticSpeechRecognition:
+        instance = object.__new__(cls)
+        instance._binding = js_obj
+        return instance
+
+    @property
+    def js_object(self) -> JsProxy:
+        return self._binding
+
+    def __getattr__(self, name: str) -> Any:
+        return getattr(self._binding, name)
+
+    @property
+    def inputs(self) -> AiAutomaticSpeechRecognitionInput:
+        return _auto_to_py(self._binding.inputs)
+    
+    @inputs.setter
+    def inputs(self, value: AiAutomaticSpeechRecognitionInput) -> None:
+        self._binding.inputs = value
+
+    @property
+    def post_processed_outputs(self) -> AiAutomaticSpeechRecognitionOutput:
+        return _auto_to_py(self._binding.postProcessedOutputs)
+    
+    @post_processed_outputs.setter
+    def post_processed_outputs(self, value: AiAutomaticSpeechRecognitionOutput) -> None:
+        self._binding.postProcessedOutputs = value
+
+
+class BaseAiSummarization:
+    _binding: Any
+
+    @classmethod
+    def from_js(cls, js_obj: JsProxy) -> BaseAiSummarization:
+        instance = object.__new__(cls)
+        instance._binding = js_obj
+        return instance
+
+    @property
+    def js_object(self) -> JsProxy:
+        return self._binding
+
+    def __getattr__(self, name: str) -> Any:
+        return getattr(self._binding, name)
+
+    @property
+    def inputs(self) -> AiSummarizationInput:
+        return _auto_to_py(self._binding.inputs)
+    
+    @inputs.setter
+    def inputs(self, value: AiSummarizationInput) -> None:
+        self._binding.inputs = value
+
+    @property
+    def post_processed_outputs(self) -> AiSummarizationOutput:
+        return _auto_to_py(self._binding.postProcessedOutputs)
+    
+    @post_processed_outputs.setter
+    def post_processed_outputs(self, value: AiSummarizationOutput) -> None:
+        self._binding.postProcessedOutputs = value
+
+
+class BaseAiTextClassification:
+    _binding: Any
+
+    @classmethod
+    def from_js(cls, js_obj: JsProxy) -> BaseAiTextClassification:
+        instance = object.__new__(cls)
+        instance._binding = js_obj
+        return instance
+
+    @property
+    def js_object(self) -> JsProxy:
+        return self._binding
+
+    def __getattr__(self, name: str) -> Any:
+        return getattr(self._binding, name)
+
+    @property
+    def inputs(self) -> AiTextClassificationInput:
+        return _auto_to_py(self._binding.inputs)
+    
+    @inputs.setter
+    def inputs(self, value: AiTextClassificationInput) -> None:
+        self._binding.inputs = value
+
+    @property
+    def post_processed_outputs(self) -> AiTextClassificationOutput:
+        return _auto_to_py(self._binding.postProcessedOutputs)
+    
+    @post_processed_outputs.setter
+    def post_processed_outputs(self, value: AiTextClassificationOutput) -> None:
+        self._binding.postProcessedOutputs = value
+
+
+class BaseAiTextEmbeddings:
+    _binding: Any
+
+    @classmethod
+    def from_js(cls, js_obj: JsProxy) -> BaseAiTextEmbeddings:
+        instance = object.__new__(cls)
+        instance._binding = js_obj
+        return instance
+
+    @property
+    def js_object(self) -> JsProxy:
+        return self._binding
+
+    def __getattr__(self, name: str) -> Any:
+        return getattr(self._binding, name)
+
+    @property
+    def inputs(self) -> AiTextEmbeddingsInput:
+        return _auto_to_py(self._binding.inputs)
+    
+    @inputs.setter
+    def inputs(self, value: AiTextEmbeddingsInput) -> None:
+        self._binding.inputs = value
+
+    @property
+    def post_processed_outputs(self) -> AiTextEmbeddingsOutput:
+        return _auto_to_py(self._binding.postProcessedOutputs)
+    
+    @post_processed_outputs.setter
+    def post_processed_outputs(self, value: AiTextEmbeddingsOutput) -> None:
+        self._binding.postProcessedOutputs = value
+
+
+class BaseAiTextGeneration:
+    _binding: Any
+
+    @classmethod
+    def from_js(cls, js_obj: JsProxy) -> BaseAiTextGeneration:
+        instance = object.__new__(cls)
+        instance._binding = js_obj
+        return instance
+
+    @property
+    def js_object(self) -> JsProxy:
+        return self._binding
+
+    def __getattr__(self, name: str) -> Any:
+        return getattr(self._binding, name)
+
+    @property
+    def inputs(self) -> AiTextGenerationInput:
+        return AiTextGenerationInput.from_js(self._binding.inputs)
+    
+    @inputs.setter
+    def inputs(self, value: AiTextGenerationInput) -> None:
+        self._binding.inputs = value
+
+    @property
+    def post_processed_outputs(self) -> AiTextGenerationOutput:
+        return _auto_to_py(self._binding.postProcessedOutputs)
+    
+    @post_processed_outputs.setter
+    def post_processed_outputs(self, value: AiTextGenerationOutput) -> None:
+        self._binding.postProcessedOutputs = value
+
+
+class BaseAiTextToSpeech:
+    _binding: Any
+
+    @classmethod
+    def from_js(cls, js_obj: JsProxy) -> BaseAiTextToSpeech:
+        instance = object.__new__(cls)
+        instance._binding = js_obj
+        return instance
+
+    @property
+    def js_object(self) -> JsProxy:
+        return self._binding
+
+    def __getattr__(self, name: str) -> Any:
+        return getattr(self._binding, name)
+
+    @property
+    def inputs(self) -> AiTextToSpeechInput:
+        return _auto_to_py(self._binding.inputs)
+    
+    @inputs.setter
+    def inputs(self, value: AiTextToSpeechInput) -> None:
+        self._binding.inputs = value
+
+    @property
+    def post_processed_outputs(self) -> AiTextToSpeechOutput:
+        return _auto_to_py(self._binding.postProcessedOutputs)
+    
+    @post_processed_outputs.setter
+    def post_processed_outputs(self, value: AiTextToSpeechOutput) -> None:
+        self._binding.postProcessedOutputs = value
+
+
+class BaseAiTextToImage:
+    _binding: Any
+
+    @classmethod
+    def from_js(cls, js_obj: JsProxy) -> BaseAiTextToImage:
+        instance = object.__new__(cls)
+        instance._binding = js_obj
+        return instance
+
+    @property
+    def js_object(self) -> JsProxy:
+        return self._binding
+
+    def __getattr__(self, name: str) -> Any:
+        return getattr(self._binding, name)
+
+    @property
+    def inputs(self) -> AiTextToImageInput:
+        return _auto_to_py(self._binding.inputs)
+    
+    @inputs.setter
+    def inputs(self, value: AiTextToImageInput) -> None:
+        self._binding.inputs = value
+
+    @property
+    def post_processed_outputs(self) -> Any:
+        return self._binding.postProcessedOutputs
+    
+    @post_processed_outputs.setter
+    def post_processed_outputs(self, value: Any) -> None:
+        self._binding.postProcessedOutputs = value
+
+
+class BaseAiTranslation:
+    _binding: Any
+
+    @classmethod
+    def from_js(cls, js_obj: JsProxy) -> BaseAiTranslation:
+        instance = object.__new__(cls)
+        instance._binding = js_obj
+        return instance
+
+    @property
+    def js_object(self) -> JsProxy:
+        return self._binding
+
+    def __getattr__(self, name: str) -> Any:
+        return getattr(self._binding, name)
+
+    @property
+    def inputs(self) -> AiTranslationInput:
+        return _auto_to_py(self._binding.inputs)
+    
+    @inputs.setter
+    def inputs(self, value: AiTranslationInput) -> None:
+        self._binding.inputs = value
+
+    @property
+    def post_processed_outputs(self) -> AiTranslationOutput:
+        return _auto_to_py(self._binding.postProcessedOutputs)
+    
+    @post_processed_outputs.setter
+    def post_processed_outputs(self, value: AiTranslationOutput) -> None:
+        self._binding.postProcessedOutputs = value
+
+
+class Ai:
+    _binding: Any
+
+    @classmethod
+    def from_js(cls, js_obj: JsProxy) -> Ai:
+        instance = object.__new__(cls)
+        instance._binding = js_obj
+        return instance
+
+    @property
+    def js_object(self) -> JsProxy:
+        return self._binding
+
+    def __getattr__(self, name: str) -> Any:
+        return getattr(self._binding, name)
+
+    @property
+    def ai_gateway_log_id(self) -> str | None:
+        return _jsnull_to_none(self._binding.aiGatewayLogId)
+    
+    @ai_gateway_log_id.setter
+    def ai_gateway_log_id(self, value: str | None) -> None:
+        self._binding.aiGatewayLogId = value
+
+    async def run(self, *args: Any, **kwargs: Any) -> Any:
+        _a = list(args)
+        if len(_a) > 0:
+            _a[0] = to_js(_a[0])
+        if len(_a) > 1:
+            _a[1] = to_js(_a[1])
+        if len(_a) > 2:
+            _a[2] = to_js(_a[2])
+        _r = await self._binding.run(*_a, **kwargs)
+        if isinstance(args[1], str):
+            return _auto_to_py(_r)
+        elif isinstance(args[1], str):
+            return _auto_to_py(_r)
+        elif isinstance(args[1], str):
+            return _auto_to_py(_r)
+        return _r
+
+    async def models(self, params: AiModelsSearchParams | None = None) -> list[AiModelsSearchObject]:
+        return [_auto_to_py(e) for e in await self._binding.models(to_js(params))]
+
+    async def to_markdown(self, *args: Any, **kwargs: Any) -> Any:
+        _a = list(args)
+        if len(_a) > 0:
+            _a[0] = to_js(_a[0])
+        if len(_a) > 1:
+            _a[1] = to_js(_a[1])
+        _r = await self._binding.toMarkdown(*_a, **kwargs)
+        if len(args) <= 0:
+            return ToMarkdownService.from_js(_r)
+        elif isinstance(args[0], list):
+            return [_auto_to_py(e) for e in _r]
+        elif isinstance(args[0], str):
+            return _auto_to_py(_r)
+        return _r
+
+
+class ToMarkdownService:
+    _binding: Any
+
+    @classmethod
+    def from_js(cls, js_obj: JsProxy) -> ToMarkdownService:
+        instance = object.__new__(cls)
+        instance._binding = js_obj
+        return instance
+
+    @property
+    def js_object(self) -> JsProxy:
+        return self._binding
+
+    def __getattr__(self, name: str) -> Any:
+        return getattr(self._binding, name)
+
+    async def transform(self, *args: Any, **kwargs: Any) -> Any:
+        _a = list(args)
+        if len(_a) > 0:
+            _a[0] = to_js(_a[0])
+        if len(_a) > 1:
+            _a[1] = to_js(_a[1])
+        _r = await self._binding.transform(*_a, **kwargs)
+        if isinstance(args[0], list):
+            return [_auto_to_py(e) for e in _r]
+        elif isinstance(args[0], str):
+            return _auto_to_py(_r)
+        return _r
+
+    async def supported(self) -> list[SupportedFileFormat]:
+        return [_auto_to_py(e) for e in await self._binding.supported()]
+
+
+class AiModels:
+    _binding: Any
+
+    @classmethod
+    def from_js(cls, js_obj: JsProxy) -> AiModels:
+        instance = object.__new__(cls)
+        instance._binding = js_obj
+        return instance
+
+    @property
+    def js_object(self) -> JsProxy:
+        return self._binding
+
+    def __getattr__(self, name: str) -> Any:
+        return getattr(self._binding, name)
+
+
+class AiImageClassificationInput(TypedDict):
+    image: list[int | float]
+
+
+class AiImageToTextInput(TypedDict):
+    image: list[int | float]
+    prompt: str | None
+    max_tokens: int | float | None
+    temperature: int | float | None
+    top_p: int | float | None
+    top_k: int | float | None
+    seed: int | float | None
+    repetition_penalty: int | float | None
+    frequency_penalty: int | float | None
+    presence_penalty: int | float | None
+    raw: bool | None
+    messages: list[RoleScopedChatInput] | None
+
+
+class AiImageToTextOutput(TypedDict):
+    description: str
+
+
+class AiImageTextToTextInput(TypedDict):
+    image: str
+    prompt: str | None
+    max_tokens: int | float | None
+    temperature: int | float | None
+    ignore_eos: bool | None
+    top_p: int | float | None
+    top_k: int | float | None
+    seed: int | float | None
+    repetition_penalty: int | float | None
+    frequency_penalty: int | float | None
+    presence_penalty: int | float | None
+    raw: bool | None
+    messages: list[RoleScopedChatInput] | None
+
+
+class AiImageTextToTextOutput(TypedDict):
+    description: str
+
+
+class AiObjectDetectionInput(TypedDict):
+    image: list[int | float]
+
+
+class AiSentenceSimilarityInput(TypedDict):
+    source: str
+    sentences: list[str]
+
+
+class AiAutomaticSpeechRecognitionInput(TypedDict):
+    audio: list[int | float]
+
+
+class AiAutomaticSpeechRecognitionOutput(TypedDict):
+    text: str | None
+    words: list[Any] | None
+    vtt: str | None
+    word: str
+    start: int | float
+    end: int | float
+
+
+class AiSummarizationInput(TypedDict):
+    input_text: str
+    max_length: int | float | None
+
+
+class AiSummarizationOutput(TypedDict):
+    summary: str
+
+
+class AiTextClassificationInput(TypedDict):
+    text: str
+
+
+class AiTextEmbeddingsInput(TypedDict):
+    text: str | list[str]
+
+
+class AiTextEmbeddingsOutput(TypedDict):
+    shape: list[int | float]
+    data: list[list[int | float]]
+
+
+class AiTextGenerationInput:
+    _binding: Any
+
+    @classmethod
+    def from_js(cls, js_obj: JsProxy) -> AiTextGenerationInput:
+        instance = object.__new__(cls)
+        instance._binding = js_obj
+        return instance
+
+    @property
+    def js_object(self) -> JsProxy:
+        return self._binding
+
+    def __getattr__(self, name: str) -> Any:
+        return getattr(self._binding, name)
+
+    @property
+    def prompt(self) -> str | None:
+        return _jsnull_to_none(self._binding.prompt)
+    
+    @prompt.setter
+    def prompt(self, value: str | None) -> None:
+        self._binding.prompt = value
+
+    @property
+    def raw(self) -> bool | None:
+        return _jsnull_to_none(self._binding.raw)
+    
+    @raw.setter
+    def raw(self, value: bool | None) -> None:
+        self._binding.raw = value
+
+    @property
+    def stream(self) -> bool | None:
+        return _jsnull_to_none(self._binding.stream)
+    
+    @stream.setter
+    def stream(self, value: bool | None) -> None:
+        self._binding.stream = value
+
+    @property
+    def max_tokens(self) -> int | float | None:
+        return _jsnull_to_none(self._binding.max_tokens)
+    
+    @max_tokens.setter
+    def max_tokens(self, value: int | float | None) -> None:
+        self._binding.max_tokens = value
+
+    @property
+    def temperature(self) -> int | float | None:
+        return _jsnull_to_none(self._binding.temperature)
+    
+    @temperature.setter
+    def temperature(self, value: int | float | None) -> None:
+        self._binding.temperature = value
+
+    @property
+    def top_p(self) -> int | float | None:
+        return _jsnull_to_none(self._binding.top_p)
+    
+    @top_p.setter
+    def top_p(self, value: int | float | None) -> None:
+        self._binding.top_p = value
+
+    @property
+    def top_k(self) -> int | float | None:
+        return _jsnull_to_none(self._binding.top_k)
+    
+    @top_k.setter
+    def top_k(self, value: int | float | None) -> None:
+        self._binding.top_k = value
+
+    @property
+    def seed(self) -> int | float | None:
+        return _jsnull_to_none(self._binding.seed)
+    
+    @seed.setter
+    def seed(self, value: int | float | None) -> None:
+        self._binding.seed = value
+
+    @property
+    def repetition_penalty(self) -> int | float | None:
+        return _jsnull_to_none(self._binding.repetition_penalty)
+    
+    @repetition_penalty.setter
+    def repetition_penalty(self, value: int | float | None) -> None:
+        self._binding.repetition_penalty = value
+
+    @property
+    def frequency_penalty(self) -> int | float | None:
+        return _jsnull_to_none(self._binding.frequency_penalty)
+    
+    @frequency_penalty.setter
+    def frequency_penalty(self, value: int | float | None) -> None:
+        self._binding.frequency_penalty = value
+
+    @property
+    def presence_penalty(self) -> int | float | None:
+        return _jsnull_to_none(self._binding.presence_penalty)
+    
+    @presence_penalty.setter
+    def presence_penalty(self, value: int | float | None) -> None:
+        self._binding.presence_penalty = value
+
+    @property
+    def messages(self) -> list[RoleScopedChatInput] | None:
+        return [_auto_to_py(e) for e in self._binding.messages]
+    
+    @messages.setter
+    def messages(self, value: list[RoleScopedChatInput] | None) -> None:
+        self._binding.messages = value
+
+    @property
+    def response_format(self) -> AiTextGenerationResponseFormat | None:
+        _v = _jsnull_to_none(self._binding.response_format)
+        return AiTextGenerationResponseFormat.from_js(_v) if _v is not None else None
+    
+    @response_format.setter
+    def response_format(self, value: AiTextGenerationResponseFormat | None) -> None:
+        self._binding.response_format = value
+
+    @property
+    def tools(self) -> list[AiTextGenerationToolInput] | list[AiTextGenerationToolLegacyInput] | (Any) | None:
+        return _jsnull_to_none(self._binding.tools)
+    
+    @tools.setter
+    def tools(self, value: list[AiTextGenerationToolInput] | list[AiTextGenerationToolLegacyInput] | (Any) | None) -> None:
+        self._binding.tools = value
+
+    @property
+    def functions(self) -> list[AiTextGenerationFunctionsInput] | None:
+        return [_auto_to_py(e) for e in self._binding.functions]
+    
+    @functions.setter
+    def functions(self, value: list[AiTextGenerationFunctionsInput] | None) -> None:
+        self._binding.functions = value
+
+
+class AiTextGenerationOutput(TypedDict, total=False):
+    response: str
+    tool_calls: Any
+    usage: UsageTags
+
+
+class AiTextToSpeechInput(TypedDict):
+    prompt: str
+    lang: str | None
+
+
+class AiTextToImageInput(TypedDict):
+    prompt: str
+    negative_prompt: str | None
+    height: int | float | None
+    width: int | float | None
+    image: list[int | float] | None
+    image_b64: str | None
+    mask: list[int | float] | None
+    num_steps: int | float | None
+    strength: int | float | None
+    guidance: int | float | None
+    seed: int | float | None
+
+
+class AiTranslationInput(TypedDict):
+    text: str
+    target_lang: str
+    source_lang: str | None
+
+
+class AiTranslationOutput(TypedDict, total=False):
+    translated_text: str
+
+
+class GatewayOptions(TypedDict):
+    id: str
+    cacheKey: str | None
+    cacheTtl: int | float | None
+    skipCache: bool | None
+    metadata: dict[str, int | float | str | bool | int | None] | None
+    collectLog: bool | None
+    eventId: str | None
+    requestTimeoutMs: int | float | None
+    retries: GatewayRetries | None
+
+
+class AiAsyncBatchResponse(TypedDict):
+    request_id: str
+
+
+class AiOptions(TypedDict, total=False):
+    queueRequest: bool
+    websocket: bool
+    tags: list[str]
+    gateway: GatewayOptions
+    returnRawResponse: bool
+    prefix: str
+    extraHeaders: Any
+    signal: Any
+
+
+class AiModelsSearchParams(TypedDict, total=False):
+    author: str
+    hide_experimental: bool
+    page: int | float
+    per_page: int | float
+    search: str
+    source: int | float
+    task: str
+
+
+class AiModelsSearchObject(TypedDict):
+    id: str
+    source: int | float
+    name: str
+    description: str
+    task: Any
+    tags: list[str]
+    properties: list[Any]
+    property_id: str
+    value: str
+
+
+class MarkdownDocument(TypedDict):
+    name: str
+    blob: Any
+
+
+class ConversionRequestOptions(TypedDict, total=False):
+    gateway: GatewayOptions
+    extraHeaders: Any
+    conversionOptions: ConversionOptions
+
+
+class SupportedFileFormat(TypedDict):
+    mimeType: str
+    extension: str
+
+
+class RoleScopedChatInput(TypedDict):
+    role: (Any) | Literal["user", "assistant", "system", "tool"]
+    content: str
+    name: str | None
+
+
+class AiTextGenerationResponseFormat:
+    _binding: Any
+
+    @classmethod
+    def from_js(cls, js_obj: JsProxy) -> AiTextGenerationResponseFormat:
+        instance = object.__new__(cls)
+        instance._binding = js_obj
+        return instance
+
+    @property
+    def js_object(self) -> JsProxy:
+        return self._binding
+
+    def __getattr__(self, name: str) -> Any:
+        return getattr(self._binding, name)
+
+    @property
+    def type_(self) -> str:
+        return getattr(self._binding, "type")
+    
+    @type_.setter
+    def type_(self, value: str) -> None:
+        setattr(self._binding, "type", value)
+
+    @property
+    def json_schema(self) -> Any | None:
+        return _jsnull_to_none(self._binding.json_schema)
+    
+    @json_schema.setter
+    def json_schema(self, value: Any | None) -> None:
+        self._binding.json_schema = value
+
+
+class AiTextGenerationToolInput:
+    _binding: Any
+
+    @classmethod
+    def from_js(cls, js_obj: JsProxy) -> AiTextGenerationToolInput:
+        instance = object.__new__(cls)
+        instance._binding = js_obj
+        return instance
+
+    @property
+    def js_object(self) -> JsProxy:
+        return self._binding
+
+    def __getattr__(self, name: str) -> Any:
+        return getattr(self._binding, name)
+
+    @property
+    def type_(self) -> (Any) | Literal["function"]:
+        return getattr(self._binding, "type")
+    
+    @type_.setter
+    def type_(self, value: (Any) | Literal["function"]) -> None:
+        setattr(self._binding, "type", value)
+
+    @property
+    def function(self) -> Any:
+        return self._binding.function
+    
+    @function.setter
+    def function(self, value: Any) -> None:
+        self._binding.function = value
+
+    @property
+    def properties(self) -> Any:
+        return self._binding.properties
+    
+    @properties.setter
+    def properties(self, value: Any) -> None:
+        self._binding.properties = value
+
+    @property
+    def required(self) -> list[str]:
+        return self._binding.required
+    
+    @required.setter
+    def required(self, value: list[str]) -> None:
+        self._binding.required = value
+
+    @property
+    def name(self) -> str:
+        return self._binding.name
+    
+    @name.setter
+    def name(self, value: str) -> None:
+        self._binding.name = value
+
+    @property
+    def description(self) -> str:
+        return self._binding.description
+    
+    @description.setter
+    def description(self, value: str) -> None:
+        self._binding.description = value
+
+    @property
+    def parameters(self) -> Any | None:
+        return _jsnull_to_none(self._binding.parameters)
+    
+    @parameters.setter
+    def parameters(self, value: Any | None) -> None:
+        self._binding.parameters = value
+
+
+class AiTextGenerationToolLegacyInput:
+    _binding: Any
+
+    @classmethod
+    def from_js(cls, js_obj: JsProxy) -> AiTextGenerationToolLegacyInput:
+        instance = object.__new__(cls)
+        instance._binding = js_obj
+        return instance
+
+    @property
+    def js_object(self) -> JsProxy:
+        return self._binding
+
+    def __getattr__(self, name: str) -> Any:
+        return getattr(self._binding, name)
+
+    @property
+    def name(self) -> str:
+        return self._binding.name
+    
+    @name.setter
+    def name(self, value: str) -> None:
+        self._binding.name = value
+
+    @property
+    def description(self) -> str:
+        return self._binding.description
+    
+    @description.setter
+    def description(self, value: str) -> None:
+        self._binding.description = value
+
+    @property
+    def parameters(self) -> Any | None:
+        return _jsnull_to_none(self._binding.parameters)
+    
+    @parameters.setter
+    def parameters(self, value: Any | None) -> None:
+        self._binding.parameters = value
+
+    @property
+    def type_(self) -> (Any) | Literal["object"]:
+        return getattr(self._binding, "type")
+    
+    @type_.setter
+    def type_(self, value: (Any) | Literal["object"]) -> None:
+        setattr(self._binding, "type", value)
+
+    @property
+    def properties(self) -> Any:
+        return self._binding.properties
+    
+    @properties.setter
+    def properties(self, value: Any) -> None:
+        self._binding.properties = value
+
+    @property
+    def required(self) -> list[str]:
+        return self._binding.required
+    
+    @required.setter
+    def required(self, value: list[str]) -> None:
+        self._binding.required = value
+
+
+class AiTextGenerationFunctionsInput(TypedDict):
+    name: str
+    code: str
+
+
+class AiTextGenerationToolLegacyOutput(TypedDict):
+    name: str
+    arguments: Any
+
+
+class AiTextGenerationToolOutput:
+    _binding: Any
+
+    @classmethod
+    def from_js(cls, js_obj: JsProxy) -> AiTextGenerationToolOutput:
+        instance = object.__new__(cls)
+        instance._binding = js_obj
+        return instance
+
+    @property
+    def js_object(self) -> JsProxy:
+        return self._binding
+
+    def __getattr__(self, name: str) -> Any:
+        return getattr(self._binding, name)
+
+    @property
+    def id(self) -> str:
+        return self._binding.id
+    
+    @id.setter
+    def id(self, value: str) -> None:
+        self._binding.id = value
+
+    @property
+    def type_(self) -> Literal["function"]:
+        return getattr(self._binding, "type")
+    
+    @type_.setter
+    def type_(self, value: Literal["function"]) -> None:
+        setattr(self._binding, "type", value)
+
+    @property
+    def function(self) -> Any:
+        return self._binding.function
+    
+    @function.setter
+    def function(self, value: Any) -> None:
+        self._binding.function = value
+
+    @property
+    def name(self) -> str:
+        return self._binding.name
+    
+    @name.setter
+    def name(self, value: str) -> None:
+        self._binding.name = value
+
+    @property
+    def arguments(self) -> str:
+        return self._binding.arguments
+    
+    @arguments.setter
+    def arguments(self, value: str) -> None:
+        self._binding.arguments = value
+
+
+class UsageTags(TypedDict):
+    prompt_tokens: int | float
+    completion_tokens: int | float
+    total_tokens: int | float
+
+
+class GatewayRetries(TypedDict, total=False):
+    maxAttempts: Literal[1, 2, 3, 4, 5] | None
+    retryDelayMs: int | float
+    backoff: Literal["constant", "linear", "exponential"] | None
+
+
+class ConversionOptions(TypedDict, total=False):
+    html: Any
+    docx: Any
+    image: ImageConversionOptions
+    pdf: Any
+    descriptionLanguage: Literal["en", "es", "fr", "it", "pt", "de"] | None
+    convert: bool
+    maxConvertedImages: int | float
+    convertOGImage: bool
+    images: Any | EmbeddedImageConversionOptions | EmbeddedImageConversionOptions
+    hostname: str
+    cssSelector: str
+    metadata: bool
+
+
+class EmbeddedImageConversionOptions(TypedDict, total=False):
+    descriptionLanguage: Literal["en", "es", "fr", "it", "pt", "de"] | None
+    convert: bool
+    maxConvertedImages: int | float
+
+
+class ImageConversionOptions(TypedDict, total=False):
+    descriptionLanguage: Literal["en", "es", "fr", "it", "pt", "de"] | None
+
+
+class AiImageClassificationOutput(TypedDict, total=False):
+    score: int | float
+    label: str
+
+
+class AiObjectDetectionOutput(TypedDict, total=False):
+    score: int | float
+    label: str
+
+
+class AiTextClassificationOutput(TypedDict, total=False):
+    score: int | float
+    label: str
+
+
+class AiTextToSpeechOutput(TypedDict):
+    audio: str
+
+
+class ConversionResponse(TypedDict):
+    id: str
+    name: str
+    mimeType: str
+    format: bool
+    tokens: int | float | None
+    data: str | None
+    error: str | None
