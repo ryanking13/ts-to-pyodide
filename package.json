@@ -5,6 +5,10 @@
   "license": "ISC",
   "type": "module",
   "bin": "dist/main.js",
+  "files": [
+    "dist",
+    "src/prelude.py"
+  ],
   "scripts": {
     "test": "node --test --import=tsx 'tests/**/*.test.ts'",
     "test:integration": "INTEGRATION_TEST=1 node --test --import=tsx tests/integration.test.ts",
