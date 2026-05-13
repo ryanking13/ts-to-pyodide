@@ -1,18 +1,18 @@
 class Hyperdrive:
-    _binding: Any
+    _js_obj: Any
 
     @classmethod
     def from_js(cls, js_obj: JsProxy) -> Hyperdrive:
         instance = object.__new__(cls)
-        instance._binding = js_obj
+        instance._js_obj = js_obj
         return instance
 
     @property
     def js_object(self) -> JsProxy:
-        return self._binding
+        return self._js_obj
 
     def __getattr__(self, name: str) -> Any:
-        return getattr(self._binding, name)
+        return getattr(self._js_obj, name)
 
     def __getitem__(self, key: str) -> Any:
         return getattr(self, key)
@@ -21,34 +21,34 @@ class Hyperdrive:
         setattr(self, key, value)
 
     def __eq__(self, other: Any) -> bool:
-        return isinstance(other, self.__class__) and self._binding == other._binding
+        return isinstance(other, self.__class__) and self._js_obj == other._js_obj
 
     def __hash__(self) -> int:
-        return id(self._binding)
+        return id(self._js_obj)
 
     @property
     def connection_string(self) -> str:
-        return self._binding.connectionString
+        return self._js_obj.connectionString
 
     @property
     def host(self) -> str:
-        return self._binding.host
+        return self._js_obj.host
 
     @property
     def port(self) -> int | float:
-        return self._binding.port
+        return self._js_obj.port
 
     @property
     def user(self) -> str:
-        return self._binding.user
+        return self._js_obj.user
 
     @property
     def password(self) -> str:
-        return self._binding.password
+        return self._js_obj.password
 
     @property
     def database(self) -> str:
-        return self._binding.database
+        return self._js_obj.database
 
     def connect(self) -> Any:
-        return self._binding.connect()
+        return self._js_obj.connect()

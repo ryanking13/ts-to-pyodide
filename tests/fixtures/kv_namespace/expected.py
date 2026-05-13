@@ -2,20 +2,20 @@ from __future__ import annotations
 from prelude import *
 
 class KVNamespace:
-    _binding: Any
+    _js_obj: Any
 
     @classmethod
     def from_js(cls, js_obj: JsProxy) -> KVNamespace:
         instance = object.__new__(cls)
-        instance._binding = js_obj
+        instance._js_obj = js_obj
         return instance
 
     @property
     def js_object(self) -> JsProxy:
-        return self._binding
+        return self._js_obj
 
     def __getattr__(self, name: str) -> Any:
-        return getattr(self._binding, name)
+        return getattr(self._js_obj, name)
 
     def __getitem__(self, key: str) -> Any:
         return getattr(self, key)
@@ -24,10 +24,10 @@ class KVNamespace:
         setattr(self, key, value)
 
     def __eq__(self, other: Any) -> bool:
-        return isinstance(other, self.__class__) and self._binding == other._binding
+        return isinstance(other, self.__class__) and self._js_obj == other._js_obj
 
     def __hash__(self) -> int:
-        return id(self._binding)
+        return id(self._js_obj)
 
     async def get(self, *args: Any, **kwargs: Any) -> Any:
         _a = list(args)
@@ -35,18 +35,18 @@ class KVNamespace:
             _a[0] = to_js(_a[0])
         if len(_a) > 1:
             _a[1] = to_js(_a[1])
-        _r = await self._binding.get(*_a, **kwargs)
+        _r = await self._js_obj.get(*_a, **kwargs)
         if isinstance(args[0], str):
-            return _auto_to_py(_jsnull_to_none(_r))
+            return to_py(_jsnull_to_none(_r))
         elif isinstance(args[0], list):
-            return _auto_to_py(_r)
+            return to_py(_r)
         return _r
 
     async def list(self, options: KVNamespaceListOptions | None = None) -> KVNamespaceListResult:
-        return _auto_to_py(await self._binding.list(to_js(options)))
+        return to_py(await self._js_obj.list(to_js(options)))
 
     async def put(self, key: str, value: str | JsBuffer | JsProxy, options: KVNamespacePutOptions | None = None) -> None:
-        await self._binding.put(key, to_js(value), to_js(options))
+        await self._js_obj.put(key, to_js(value), to_js(options))
 
     async def get_with_metadata(self, *args: Any, **kwargs: Any) -> Any:
         _a = list(args)
@@ -54,15 +54,15 @@ class KVNamespace:
             _a[0] = to_js(_a[0])
         if len(_a) > 1:
             _a[1] = to_js(_a[1])
-        _r = await self._binding.getWithMetadata(*_a, **kwargs)
+        _r = await self._js_obj.getWithMetadata(*_a, **kwargs)
         if isinstance(args[0], str):
-            return _auto_to_py(_r)
+            return to_py(_r)
         elif isinstance(args[0], list):
-            return _auto_to_py(_r)
+            return to_py(_r)
         return _r
 
     async def delete(self, key: str) -> None:
-        await self._binding.delete(key)
+        await self._js_obj.delete(key)
 
 
 class KVNamespaceGetOptions(TypedDict):

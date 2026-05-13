@@ -1,18 +1,18 @@
 class ObjectBody:
-    _binding: Any
+    _js_obj: Any
 
     @classmethod
     def from_js(cls, js_obj: JsProxy) -> ObjectBody:
         instance = object.__new__(cls)
-        instance._binding = js_obj
+        instance._js_obj = js_obj
         return instance
 
     @property
     def js_object(self) -> JsProxy:
-        return self._binding
+        return self._js_obj
 
     def __getattr__(self, name: str) -> Any:
-        return getattr(self._binding, name)
+        return getattr(self._js_obj, name)
 
     def __getitem__(self, key: str) -> Any:
         return getattr(self, key)
@@ -21,22 +21,22 @@ class ObjectBody:
         setattr(self, key, value)
 
     def __eq__(self, other: Any) -> bool:
-        return isinstance(other, self.__class__) and self._binding == other._binding
+        return isinstance(other, self.__class__) and self._js_obj == other._js_obj
 
     def __hash__(self) -> int:
-        return id(self._binding)
+        return id(self._js_obj)
 
     @property
     def etag(self) -> str:
-        return self._binding.etag
+        return self._js_obj.etag
 
     @property
     def body(self) -> str:
-        return self._binding.body
+        return self._js_obj.body
 
     @property
     def body_used(self) -> bool:
-        return self._binding.bodyUsed
+        return self._js_obj.bodyUsed
 
     async def text(self) -> str:
-        return await self._binding.text()
+        return await self._js_obj.text()

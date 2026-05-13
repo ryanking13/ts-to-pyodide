@@ -2,20 +2,20 @@ from __future__ import annotations
 from prelude import *
 
 class Queue:
-    _binding: Any
+    _js_obj: Any
 
     @classmethod
     def from_js(cls, js_obj: JsProxy) -> Queue:
         instance = object.__new__(cls)
-        instance._binding = js_obj
+        instance._js_obj = js_obj
         return instance
 
     @property
     def js_object(self) -> JsProxy:
-        return self._binding
+        return self._js_obj
 
     def __getattr__(self, name: str) -> Any:
-        return getattr(self._binding, name)
+        return getattr(self._js_obj, name)
 
     def __getitem__(self, key: str) -> Any:
         return getattr(self, key)
@@ -24,36 +24,36 @@ class Queue:
         setattr(self, key, value)
 
     def __eq__(self, other: Any) -> bool:
-        return isinstance(other, self.__class__) and self._binding == other._binding
+        return isinstance(other, self.__class__) and self._js_obj == other._js_obj
 
     def __hash__(self) -> int:
-        return id(self._binding)
+        return id(self._js_obj)
 
     async def metrics(self) -> QueueMetrics:
-        return _auto_to_py(await self._binding.metrics())
+        return to_py(await self._js_obj.metrics())
 
     async def send(self, message: Any, options: QueueSendOptions | None = None) -> QueueSendResponse:
-        return _auto_to_py(await self._binding.send(to_js(_none_to_jsnull(message)), to_js(options)))
+        return to_py(await self._js_obj.send(to_js(_none_to_jsnull(message)), to_js(options)))
 
     async def send_batch(self, messages: Any, options: QueueSendBatchOptions | None = None) -> QueueSendBatchResponse:
-        return _auto_to_py(await self._binding.sendBatch(to_js(messages), to_js(options)))
+        return to_py(await self._js_obj.sendBatch(to_js(messages), to_js(options)))
 
 
 class MessageBatch:
-    _binding: Any
+    _js_obj: Any
 
     @classmethod
     def from_js(cls, js_obj: JsProxy) -> MessageBatch:
         instance = object.__new__(cls)
-        instance._binding = js_obj
+        instance._js_obj = js_obj
         return instance
 
     @property
     def js_object(self) -> JsProxy:
-        return self._binding
+        return self._js_obj
 
     def __getattr__(self, name: str) -> Any:
-        return getattr(self._binding, name)
+        return getattr(self._js_obj, name)
 
     def __getitem__(self, key: str) -> Any:
         return getattr(self, key)
@@ -62,28 +62,28 @@ class MessageBatch:
         setattr(self, key, value)
 
     def __eq__(self, other: Any) -> bool:
-        return isinstance(other, self.__class__) and self._binding == other._binding
+        return isinstance(other, self.__class__) and self._js_obj == other._js_obj
 
     def __hash__(self) -> int:
-        return id(self._binding)
+        return id(self._js_obj)
 
     @property
     def messages(self) -> list[Message]:
-        return [Message.from_js(e) for e in self._binding.messages]
+        return [Message.from_js(e) for e in self._js_obj.messages]
 
     @property
     def queue(self) -> str:
-        return self._binding.queue
+        return self._js_obj.queue
 
     @property
     def metadata(self) -> MessageBatchMetadata:
-        return _auto_to_py(self._binding.metadata)
+        return to_py(self._js_obj.metadata)
 
     def retry_all(self, options: QueueRetryOptions | None = None) -> None:
-        self._binding.retryAll(to_js(options))
+        self._js_obj.retryAll(to_js(options))
 
     def ack_all(self) -> None:
-        self._binding.ackAll()
+        self._js_obj.ackAll()
 
 
 class QueueMetrics(TypedDict):
@@ -120,20 +120,20 @@ class QueueRetryOptions(TypedDict, total=False):
 
 
 class Message:
-    _binding: Any
+    _js_obj: Any
 
     @classmethod
     def from_js(cls, js_obj: JsProxy) -> Message:
         instance = object.__new__(cls)
-        instance._binding = js_obj
+        instance._js_obj = js_obj
         return instance
 
     @property
     def js_object(self) -> JsProxy:
-        return self._binding
+        return self._js_obj
 
     def __getattr__(self, name: str) -> Any:
-        return getattr(self._binding, name)
+        return getattr(self._js_obj, name)
 
     def __getitem__(self, key: str) -> Any:
         return getattr(self, key)
@@ -142,32 +142,32 @@ class Message:
         setattr(self, key, value)
 
     def __eq__(self, other: Any) -> bool:
-        return isinstance(other, self.__class__) and self._binding == other._binding
+        return isinstance(other, self.__class__) and self._js_obj == other._js_obj
 
     def __hash__(self) -> int:
-        return id(self._binding)
+        return id(self._js_obj)
 
     @property
     def id(self) -> str:
-        return self._binding.id
+        return self._js_obj.id
 
     @property
     def timestamp(self) -> datetime:
-        return _from_js_date(self._binding.timestamp)
+        return _from_js_date(self._js_obj.timestamp)
 
     @property
     def body(self) -> Any:
-        return _auto_to_py(_jsnull_to_none(self._binding.body))
+        return to_py(_jsnull_to_none(self._js_obj.body))
 
     @property
     def attempts(self) -> int | float:
-        return self._binding.attempts
+        return self._js_obj.attempts
 
     def retry(self, options: QueueRetryOptions | None = None) -> None:
-        self._binding.retry(to_js(options))
+        self._js_obj.retry(to_js(options))
 
     def ack(self) -> None:
-        self._binding.ack()
+        self._js_obj.ack()
 
 
 class MessageBatchMetadata(TypedDict):

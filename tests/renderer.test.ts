@@ -74,7 +74,7 @@ describe("async detection", () => {
       ]),
     );
     assert.ok(result.includes("async def get(self, key: str) -> str:"));
-    assert.ok(result.includes("return await self._binding.get(key)"));
+    assert.ok(result.includes("return await self._js_obj.get(key)"));
   });
 
   it("Promise<str | None> unwraps with jsnull_to_none", () => {
@@ -90,7 +90,7 @@ describe("async detection", () => {
     );
     assert.ok(result.includes("async def get(self, key: str) -> str | None:"));
     assert.ok(
-      result.includes("_jsnull_to_none(await self._binding.get(key))"),
+      result.includes("_jsnull_to_none(await self._js_obj.get(key))"),
     );
   });
 
@@ -142,7 +142,7 @@ describe("properties", () => {
     );
     assert.ok(result.includes("@property"));
     assert.ok(result.includes("@name.setter"));
-    assert.ok(result.includes("self._binding.name = value"));
+    assert.ok(result.includes("self._js_obj.name = value"));
   });
 });
 
@@ -159,7 +159,7 @@ describe("snake_case conversion", () => {
       ]),
     );
     assert.ok(result.includes("async def get_with_metadata(self, key: str)"));
-    assert.ok(result.includes("self._binding.getWithMetadata(key)"));
+    assert.ok(result.includes("self._js_obj.getWithMetadata(key)"));
   });
 
   it("camelCase property", () => {
@@ -169,7 +169,7 @@ describe("snake_case conversion", () => {
       ]),
     );
     assert.ok(result.includes("def connection_string(self) -> str:"));
-    assert.ok(result.includes("self._binding.connectionString"));
+    assert.ok(result.includes("self._js_obj.connectionString"));
   });
 
   it("acronym handling", () => {
@@ -227,7 +227,7 @@ describe("rest params", () => {
       ]),
     );
     assert.ok(result.includes("def bind(self, *values: Any) -> Any:"));
-    assert.ok(result.includes("self._binding.bind(*[_none_to_jsnull(v) for v in values])"));
+    assert.ok(result.includes("self._js_obj.bind(*[_none_to_jsnull(v) for v in values])"));
   });
 
   it("params plus spread", () => {
@@ -244,7 +244,7 @@ describe("rest params", () => {
     assert.ok(
       result.includes("def log(self, message: str, *args: Any) -> None:"),
     );
-    assert.ok(result.includes("self._binding.log(message, *[_none_to_jsnull(v) for v in args])"));
+    assert.ok(result.includes("self._js_obj.log(message, *[_none_to_jsnull(v) for v in args])"));
   });
 });
 
@@ -256,7 +256,7 @@ describe("reserved words", () => {
       ]),
     );
     assert.ok(result.includes("def from_(self) -> str:"));
-    assert.ok(result.includes('getattr(self._binding, "from")'));
+    assert.ok(result.includes('getattr(self._js_obj, "from")'));
   });
 
   it("del method gets underscore + getattr", () => {
@@ -264,7 +264,7 @@ describe("reserved words", () => {
       irInterface("X_iface", [irMethod("del", [irSig()])]),
     );
     assert.ok(result.includes("def del_(self) -> None:"));
-    assert.ok(result.includes('getattr(self._binding, "del")()'));
+    assert.ok(result.includes('getattr(self._js_obj, "del")()'));
   });
 });
 
@@ -279,7 +279,7 @@ describe("nullable returns", () => {
     );
     assert.ok(result.includes("def get_bookmark(self) -> str | None:"));
     assert.ok(
-      result.includes("_jsnull_to_none(self._binding.getBookmark())"),
+      result.includes("_jsnull_to_none(self._js_obj.getBookmark())"),
     );
   });
 
@@ -309,7 +309,7 @@ describe("nullable returns", () => {
       ]),
     );
     assert.ok(
-      result.includes("_jsnull_to_none(self._binding.httpMetadata)"),
+      result.includes("_jsnull_to_none(self._js_obj.httpMetadata)"),
     );
   });
 });
@@ -466,7 +466,7 @@ describe("sub-binding wrapping", () => {
       ]),
     ]);
     assert.ok(result.includes("def videos(self) -> Videos:"));
-    assert.ok(result.includes("return Videos.from_js(self._binding.videos)"));
+    assert.ok(result.includes("return Videos.from_js(self._js_obj.videos)"));
   });
 
   it("property typed as unknown interface stays as Any", () => {
@@ -476,7 +476,7 @@ describe("sub-binding wrapping", () => {
       ]),
     ]);
     assert.ok(result.includes("def unknown(self) -> Any:"));
-    assert.ok(result.includes("return self._binding.unknown"));
+    assert.ok(result.includes("return self._js_obj.unknown"));
     assert.ok(!result.includes("NotRegistered"));
   });
 
@@ -495,7 +495,7 @@ describe("sub-binding wrapping", () => {
       ]),
     ]);
     assert.ok(result.includes("def prepare(self, query: str) -> Stmt:"));
-    assert.ok(result.includes("return Stmt.from_js(self._binding.prepare(query))"));
+    assert.ok(result.includes("return Stmt.from_js(self._js_obj.prepare(query))"));
   });
 
   it("async method returning known interface wraps await result", () => {
@@ -508,7 +508,7 @@ describe("sub-binding wrapping", () => {
       ]),
     ]);
     assert.ok(result.includes("async def connect(self) -> Session:"));
-    assert.ok(result.includes("return Session.from_js(await self._binding.connect())"));
+    assert.ok(result.includes("return Session.from_js(await self._js_obj.connect())"));
   });
 
   it("nullable known interface property uses conditional wrapping", () => {
@@ -519,7 +519,7 @@ describe("sub-binding wrapping", () => {
       ]),
     ]);
     assert.ok(result.includes("def meta(self) -> Meta | None:"));
-    assert.ok(result.includes("_v = _jsnull_to_none(self._binding.meta)"));
+    assert.ok(result.includes("_v = _jsnull_to_none(self._js_obj.meta)"));
     assert.ok(result.includes("return Meta.from_js(_v) if _v is not None else None"));
   });
 
@@ -536,7 +536,7 @@ describe("sub-binding wrapping", () => {
       ]),
     ]);
     assert.ok(result.includes("def find(self, id: str) -> Item | None:"));
-    assert.ok(result.includes("_v = _jsnull_to_none(self._binding.find(id))"));
+    assert.ok(result.includes("_v = _jsnull_to_none(self._js_obj.find(id))"));
     assert.ok(result.includes("return Item.from_js(_v) if _v is not None else None"));
   });
 
@@ -558,7 +558,7 @@ describe("sub-binding wrapping", () => {
       ]),
     ]);
     assert.ok(result.includes("@videos.setter"));
-    assert.ok(result.includes("self._binding.videos = value"));
+    assert.ok(result.includes("self._js_obj.videos = value"));
   });
 });
 
@@ -627,7 +627,7 @@ describe("constructor support", () => {
       ]),
     );
     assert.ok(result.includes("def __init__(self, *args: Any, **kwargs: Any) -> None:"));
-    assert.ok(result.includes("self._binding = js.HTMLRewriter.new(*args, **kwargs)"));
+    assert.ok(result.includes("self._js_obj = js.HTMLRewriter.new(*args, **kwargs)"));
   });
 
   it("constructor type still has from_js classmethod", () => {

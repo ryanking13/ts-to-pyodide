@@ -2,20 +2,20 @@ from __future__ import annotations
 from prelude import *
 
 class BaseAiImageClassification:
-    _binding: Any
+    _js_obj: Any
 
     @classmethod
     def from_js(cls, js_obj: JsProxy) -> BaseAiImageClassification:
         instance = object.__new__(cls)
-        instance._binding = js_obj
+        instance._js_obj = js_obj
         return instance
 
     @property
     def js_object(self) -> JsProxy:
-        return self._binding
+        return self._js_obj
 
     def __getattr__(self, name: str) -> Any:
-        return getattr(self._binding, name)
+        return getattr(self._js_obj, name)
 
     def __getitem__(self, key: str) -> Any:
         return getattr(self, key)
@@ -24,43 +24,43 @@ class BaseAiImageClassification:
         setattr(self, key, value)
 
     def __eq__(self, other: Any) -> bool:
-        return isinstance(other, self.__class__) and self._binding == other._binding
+        return isinstance(other, self.__class__) and self._js_obj == other._js_obj
 
     def __hash__(self) -> int:
-        return id(self._binding)
+        return id(self._js_obj)
 
     @property
     def inputs(self) -> AiImageClassificationInput:
-        return _auto_to_py(self._binding.inputs)
+        return to_py(self._js_obj.inputs)
     
     @inputs.setter
     def inputs(self, value: AiImageClassificationInput) -> None:
-        self._binding.inputs = value
+        self._js_obj.inputs = value
 
     @property
     def post_processed_outputs(self) -> AiImageClassificationOutput:
-        return _auto_to_py(self._binding.postProcessedOutputs)
+        return to_py(self._js_obj.postProcessedOutputs)
     
     @post_processed_outputs.setter
     def post_processed_outputs(self, value: AiImageClassificationOutput) -> None:
-        self._binding.postProcessedOutputs = value
+        self._js_obj.postProcessedOutputs = value
 
 
 class BaseAiImageToText:
-    _binding: Any
+    _js_obj: Any
 
     @classmethod
     def from_js(cls, js_obj: JsProxy) -> BaseAiImageToText:
         instance = object.__new__(cls)
-        instance._binding = js_obj
+        instance._js_obj = js_obj
         return instance
 
     @property
     def js_object(self) -> JsProxy:
-        return self._binding
+        return self._js_obj
 
     def __getattr__(self, name: str) -> Any:
-        return getattr(self._binding, name)
+        return getattr(self._js_obj, name)
 
     def __getitem__(self, key: str) -> Any:
         return getattr(self, key)
@@ -69,43 +69,43 @@ class BaseAiImageToText:
         setattr(self, key, value)
 
     def __eq__(self, other: Any) -> bool:
-        return isinstance(other, self.__class__) and self._binding == other._binding
+        return isinstance(other, self.__class__) and self._js_obj == other._js_obj
 
     def __hash__(self) -> int:
-        return id(self._binding)
+        return id(self._js_obj)
 
     @property
     def inputs(self) -> AiImageToTextInput:
-        return _auto_to_py(self._binding.inputs)
+        return to_py(self._js_obj.inputs)
     
     @inputs.setter
     def inputs(self, value: AiImageToTextInput) -> None:
-        self._binding.inputs = value
+        self._js_obj.inputs = value
 
     @property
     def post_processed_outputs(self) -> AiImageToTextOutput:
-        return _auto_to_py(self._binding.postProcessedOutputs)
+        return to_py(self._js_obj.postProcessedOutputs)
     
     @post_processed_outputs.setter
     def post_processed_outputs(self, value: AiImageToTextOutput) -> None:
-        self._binding.postProcessedOutputs = value
+        self._js_obj.postProcessedOutputs = value
 
 
 class BaseAiImageTextToText:
-    _binding: Any
+    _js_obj: Any
 
     @classmethod
     def from_js(cls, js_obj: JsProxy) -> BaseAiImageTextToText:
         instance = object.__new__(cls)
-        instance._binding = js_obj
+        instance._js_obj = js_obj
         return instance
 
     @property
     def js_object(self) -> JsProxy:
-        return self._binding
+        return self._js_obj
 
     def __getattr__(self, name: str) -> Any:
-        return getattr(self._binding, name)
+        return getattr(self._js_obj, name)
 
     def __getitem__(self, key: str) -> Any:
         return getattr(self, key)
@@ -114,43 +114,43 @@ class BaseAiImageTextToText:
         setattr(self, key, value)
 
     def __eq__(self, other: Any) -> bool:
-        return isinstance(other, self.__class__) and self._binding == other._binding
+        return isinstance(other, self.__class__) and self._js_obj == other._js_obj
 
     def __hash__(self) -> int:
-        return id(self._binding)
+        return id(self._js_obj)
 
     @property
     def inputs(self) -> AiImageTextToTextInput:
-        return _auto_to_py(self._binding.inputs)
+        return to_py(self._js_obj.inputs)
     
     @inputs.setter
     def inputs(self, value: AiImageTextToTextInput) -> None:
-        self._binding.inputs = value
+        self._js_obj.inputs = value
 
     @property
     def post_processed_outputs(self) -> AiImageTextToTextOutput:
-        return _auto_to_py(self._binding.postProcessedOutputs)
+        return to_py(self._js_obj.postProcessedOutputs)
     
     @post_processed_outputs.setter
     def post_processed_outputs(self, value: AiImageTextToTextOutput) -> None:
-        self._binding.postProcessedOutputs = value
+        self._js_obj.postProcessedOutputs = value
 
 
 class BaseAiMultimodalEmbeddings:
-    _binding: Any
+    _js_obj: Any
 
     @classmethod
     def from_js(cls, js_obj: JsProxy) -> BaseAiMultimodalEmbeddings:
         instance = object.__new__(cls)
-        instance._binding = js_obj
+        instance._js_obj = js_obj
         return instance
 
     @property
     def js_object(self) -> JsProxy:
-        return self._binding
+        return self._js_obj
 
     def __getattr__(self, name: str) -> Any:
-        return getattr(self._binding, name)
+        return getattr(self._js_obj, name)
 
     def __getitem__(self, key: str) -> Any:
         return getattr(self, key)
@@ -159,43 +159,43 @@ class BaseAiMultimodalEmbeddings:
         setattr(self, key, value)
 
     def __eq__(self, other: Any) -> bool:
-        return isinstance(other, self.__class__) and self._binding == other._binding
+        return isinstance(other, self.__class__) and self._js_obj == other._js_obj
 
     def __hash__(self) -> int:
-        return id(self._binding)
+        return id(self._js_obj)
 
     @property
     def inputs(self) -> AiImageTextToTextInput:
-        return _auto_to_py(self._binding.inputs)
+        return to_py(self._js_obj.inputs)
     
     @inputs.setter
     def inputs(self, value: AiImageTextToTextInput) -> None:
-        self._binding.inputs = value
+        self._js_obj.inputs = value
 
     @property
     def post_processed_outputs(self) -> AiImageTextToTextOutput:
-        return _auto_to_py(self._binding.postProcessedOutputs)
+        return to_py(self._js_obj.postProcessedOutputs)
     
     @post_processed_outputs.setter
     def post_processed_outputs(self, value: AiImageTextToTextOutput) -> None:
-        self._binding.postProcessedOutputs = value
+        self._js_obj.postProcessedOutputs = value
 
 
 class BaseAiObjectDetection:
-    _binding: Any
+    _js_obj: Any
 
     @classmethod
     def from_js(cls, js_obj: JsProxy) -> BaseAiObjectDetection:
         instance = object.__new__(cls)
-        instance._binding = js_obj
+        instance._js_obj = js_obj
         return instance
 
     @property
     def js_object(self) -> JsProxy:
-        return self._binding
+        return self._js_obj
 
     def __getattr__(self, name: str) -> Any:
-        return getattr(self._binding, name)
+        return getattr(self._js_obj, name)
 
     def __getitem__(self, key: str) -> Any:
         return getattr(self, key)
@@ -204,43 +204,43 @@ class BaseAiObjectDetection:
         setattr(self, key, value)
 
     def __eq__(self, other: Any) -> bool:
-        return isinstance(other, self.__class__) and self._binding == other._binding
+        return isinstance(other, self.__class__) and self._js_obj == other._js_obj
 
     def __hash__(self) -> int:
-        return id(self._binding)
+        return id(self._js_obj)
 
     @property
     def inputs(self) -> AiObjectDetectionInput:
-        return _auto_to_py(self._binding.inputs)
+        return to_py(self._js_obj.inputs)
     
     @inputs.setter
     def inputs(self, value: AiObjectDetectionInput) -> None:
-        self._binding.inputs = value
+        self._js_obj.inputs = value
 
     @property
     def post_processed_outputs(self) -> AiObjectDetectionOutput:
-        return _auto_to_py(self._binding.postProcessedOutputs)
+        return to_py(self._js_obj.postProcessedOutputs)
     
     @post_processed_outputs.setter
     def post_processed_outputs(self, value: AiObjectDetectionOutput) -> None:
-        self._binding.postProcessedOutputs = value
+        self._js_obj.postProcessedOutputs = value
 
 
 class BaseAiSentenceSimilarity:
-    _binding: Any
+    _js_obj: Any
 
     @classmethod
     def from_js(cls, js_obj: JsProxy) -> BaseAiSentenceSimilarity:
         instance = object.__new__(cls)
-        instance._binding = js_obj
+        instance._js_obj = js_obj
         return instance
 
     @property
     def js_object(self) -> JsProxy:
-        return self._binding
+        return self._js_obj
 
     def __getattr__(self, name: str) -> Any:
-        return getattr(self._binding, name)
+        return getattr(self._js_obj, name)
 
     def __getitem__(self, key: str) -> Any:
         return getattr(self, key)
@@ -249,43 +249,43 @@ class BaseAiSentenceSimilarity:
         setattr(self, key, value)
 
     def __eq__(self, other: Any) -> bool:
-        return isinstance(other, self.__class__) and self._binding == other._binding
+        return isinstance(other, self.__class__) and self._js_obj == other._js_obj
 
     def __hash__(self) -> int:
-        return id(self._binding)
+        return id(self._js_obj)
 
     @property
     def inputs(self) -> AiSentenceSimilarityInput:
-        return _auto_to_py(self._binding.inputs)
+        return to_py(self._js_obj.inputs)
     
     @inputs.setter
     def inputs(self, value: AiSentenceSimilarityInput) -> None:
-        self._binding.inputs = value
+        self._js_obj.inputs = value
 
     @property
     def post_processed_outputs(self) -> Any:
-        return self._binding.postProcessedOutputs
+        return self._js_obj.postProcessedOutputs
     
     @post_processed_outputs.setter
     def post_processed_outputs(self, value: Any) -> None:
-        self._binding.postProcessedOutputs = value
+        self._js_obj.postProcessedOutputs = value
 
 
 class BaseAiAutomaticSpeechRecognition:
-    _binding: Any
+    _js_obj: Any
 
     @classmethod
     def from_js(cls, js_obj: JsProxy) -> BaseAiAutomaticSpeechRecognition:
         instance = object.__new__(cls)
-        instance._binding = js_obj
+        instance._js_obj = js_obj
         return instance
 
     @property
     def js_object(self) -> JsProxy:
-        return self._binding
+        return self._js_obj
 
     def __getattr__(self, name: str) -> Any:
-        return getattr(self._binding, name)
+        return getattr(self._js_obj, name)
 
     def __getitem__(self, key: str) -> Any:
         return getattr(self, key)
@@ -294,43 +294,43 @@ class BaseAiAutomaticSpeechRecognition:
         setattr(self, key, value)
 
     def __eq__(self, other: Any) -> bool:
-        return isinstance(other, self.__class__) and self._binding == other._binding
+        return isinstance(other, self.__class__) and self._js_obj == other._js_obj
 
     def __hash__(self) -> int:
-        return id(self._binding)
+        return id(self._js_obj)
 
     @property
     def inputs(self) -> AiAutomaticSpeechRecognitionInput:
-        return _auto_to_py(self._binding.inputs)
+        return to_py(self._js_obj.inputs)
     
     @inputs.setter
     def inputs(self, value: AiAutomaticSpeechRecognitionInput) -> None:
-        self._binding.inputs = value
+        self._js_obj.inputs = value
 
     @property
     def post_processed_outputs(self) -> AiAutomaticSpeechRecognitionOutput:
-        return _auto_to_py(self._binding.postProcessedOutputs)
+        return to_py(self._js_obj.postProcessedOutputs)
     
     @post_processed_outputs.setter
     def post_processed_outputs(self, value: AiAutomaticSpeechRecognitionOutput) -> None:
-        self._binding.postProcessedOutputs = value
+        self._js_obj.postProcessedOutputs = value
 
 
 class BaseAiSummarization:
-    _binding: Any
+    _js_obj: Any
 
     @classmethod
     def from_js(cls, js_obj: JsProxy) -> BaseAiSummarization:
         instance = object.__new__(cls)
-        instance._binding = js_obj
+        instance._js_obj = js_obj
         return instance
 
     @property
     def js_object(self) -> JsProxy:
-        return self._binding
+        return self._js_obj
 
     def __getattr__(self, name: str) -> Any:
-        return getattr(self._binding, name)
+        return getattr(self._js_obj, name)
 
     def __getitem__(self, key: str) -> Any:
         return getattr(self, key)
@@ -339,43 +339,43 @@ class BaseAiSummarization:
         setattr(self, key, value)
 
     def __eq__(self, other: Any) -> bool:
-        return isinstance(other, self.__class__) and self._binding == other._binding
+        return isinstance(other, self.__class__) and self._js_obj == other._js_obj
 
     def __hash__(self) -> int:
-        return id(self._binding)
+        return id(self._js_obj)
 
     @property
     def inputs(self) -> AiSummarizationInput:
-        return _auto_to_py(self._binding.inputs)
+        return to_py(self._js_obj.inputs)
     
     @inputs.setter
     def inputs(self, value: AiSummarizationInput) -> None:
-        self._binding.inputs = value
+        self._js_obj.inputs = value
 
     @property
     def post_processed_outputs(self) -> AiSummarizationOutput:
-        return _auto_to_py(self._binding.postProcessedOutputs)
+        return to_py(self._js_obj.postProcessedOutputs)
     
     @post_processed_outputs.setter
     def post_processed_outputs(self, value: AiSummarizationOutput) -> None:
-        self._binding.postProcessedOutputs = value
+        self._js_obj.postProcessedOutputs = value
 
 
 class BaseAiTextClassification:
-    _binding: Any
+    _js_obj: Any
 
     @classmethod
     def from_js(cls, js_obj: JsProxy) -> BaseAiTextClassification:
         instance = object.__new__(cls)
-        instance._binding = js_obj
+        instance._js_obj = js_obj
         return instance
 
     @property
     def js_object(self) -> JsProxy:
-        return self._binding
+        return self._js_obj
 
     def __getattr__(self, name: str) -> Any:
-        return getattr(self._binding, name)
+        return getattr(self._js_obj, name)
 
     def __getitem__(self, key: str) -> Any:
         return getattr(self, key)
@@ -384,43 +384,43 @@ class BaseAiTextClassification:
         setattr(self, key, value)
 
     def __eq__(self, other: Any) -> bool:
-        return isinstance(other, self.__class__) and self._binding == other._binding
+        return isinstance(other, self.__class__) and self._js_obj == other._js_obj
 
     def __hash__(self) -> int:
-        return id(self._binding)
+        return id(self._js_obj)
 
     @property
     def inputs(self) -> AiTextClassificationInput:
-        return _auto_to_py(self._binding.inputs)
+        return to_py(self._js_obj.inputs)
     
     @inputs.setter
     def inputs(self, value: AiTextClassificationInput) -> None:
-        self._binding.inputs = value
+        self._js_obj.inputs = value
 
     @property
     def post_processed_outputs(self) -> AiTextClassificationOutput:
-        return _auto_to_py(self._binding.postProcessedOutputs)
+        return to_py(self._js_obj.postProcessedOutputs)
     
     @post_processed_outputs.setter
     def post_processed_outputs(self, value: AiTextClassificationOutput) -> None:
-        self._binding.postProcessedOutputs = value
+        self._js_obj.postProcessedOutputs = value
 
 
 class BaseAiTextEmbeddings:
-    _binding: Any
+    _js_obj: Any
 
     @classmethod
     def from_js(cls, js_obj: JsProxy) -> BaseAiTextEmbeddings:
         instance = object.__new__(cls)
-        instance._binding = js_obj
+        instance._js_obj = js_obj
         return instance
 
     @property
     def js_object(self) -> JsProxy:
-        return self._binding
+        return self._js_obj
 
     def __getattr__(self, name: str) -> Any:
-        return getattr(self._binding, name)
+        return getattr(self._js_obj, name)
 
     def __getitem__(self, key: str) -> Any:
         return getattr(self, key)
@@ -429,43 +429,43 @@ class BaseAiTextEmbeddings:
         setattr(self, key, value)
 
     def __eq__(self, other: Any) -> bool:
-        return isinstance(other, self.__class__) and self._binding == other._binding
+        return isinstance(other, self.__class__) and self._js_obj == other._js_obj
 
     def __hash__(self) -> int:
-        return id(self._binding)
+        return id(self._js_obj)
 
     @property
     def inputs(self) -> AiTextEmbeddingsInput:
-        return _auto_to_py(self._binding.inputs)
+        return to_py(self._js_obj.inputs)
     
     @inputs.setter
     def inputs(self, value: AiTextEmbeddingsInput) -> None:
-        self._binding.inputs = value
+        self._js_obj.inputs = value
 
     @property
     def post_processed_outputs(self) -> AiTextEmbeddingsOutput:
-        return _auto_to_py(self._binding.postProcessedOutputs)
+        return to_py(self._js_obj.postProcessedOutputs)
     
     @post_processed_outputs.setter
     def post_processed_outputs(self, value: AiTextEmbeddingsOutput) -> None:
-        self._binding.postProcessedOutputs = value
+        self._js_obj.postProcessedOutputs = value
 
 
 class BaseAiTextGeneration:
-    _binding: Any
+    _js_obj: Any
 
     @classmethod
     def from_js(cls, js_obj: JsProxy) -> BaseAiTextGeneration:
         instance = object.__new__(cls)
-        instance._binding = js_obj
+        instance._js_obj = js_obj
         return instance
 
     @property
     def js_object(self) -> JsProxy:
-        return self._binding
+        return self._js_obj
 
     def __getattr__(self, name: str) -> Any:
-        return getattr(self._binding, name)
+        return getattr(self._js_obj, name)
 
     def __getitem__(self, key: str) -> Any:
         return getattr(self, key)
@@ -474,43 +474,43 @@ class BaseAiTextGeneration:
         setattr(self, key, value)
 
     def __eq__(self, other: Any) -> bool:
-        return isinstance(other, self.__class__) and self._binding == other._binding
+        return isinstance(other, self.__class__) and self._js_obj == other._js_obj
 
     def __hash__(self) -> int:
-        return id(self._binding)
+        return id(self._js_obj)
 
     @property
     def inputs(self) -> AiTextGenerationInput:
-        return _auto_to_py(self._binding.inputs)
+        return to_py(self._js_obj.inputs)
     
     @inputs.setter
     def inputs(self, value: AiTextGenerationInput) -> None:
-        self._binding.inputs = value
+        self._js_obj.inputs = value
 
     @property
     def post_processed_outputs(self) -> AiTextGenerationOutput:
-        return _auto_to_py(self._binding.postProcessedOutputs)
+        return to_py(self._js_obj.postProcessedOutputs)
     
     @post_processed_outputs.setter
     def post_processed_outputs(self, value: AiTextGenerationOutput) -> None:
-        self._binding.postProcessedOutputs = value
+        self._js_obj.postProcessedOutputs = value
 
 
 class BaseAiTextToSpeech:
-    _binding: Any
+    _js_obj: Any
 
     @classmethod
     def from_js(cls, js_obj: JsProxy) -> BaseAiTextToSpeech:
         instance = object.__new__(cls)
-        instance._binding = js_obj
+        instance._js_obj = js_obj
         return instance
 
     @property
     def js_object(self) -> JsProxy:
-        return self._binding
+        return self._js_obj
 
     def __getattr__(self, name: str) -> Any:
-        return getattr(self._binding, name)
+        return getattr(self._js_obj, name)
 
     def __getitem__(self, key: str) -> Any:
         return getattr(self, key)
@@ -519,43 +519,43 @@ class BaseAiTextToSpeech:
         setattr(self, key, value)
 
     def __eq__(self, other: Any) -> bool:
-        return isinstance(other, self.__class__) and self._binding == other._binding
+        return isinstance(other, self.__class__) and self._js_obj == other._js_obj
 
     def __hash__(self) -> int:
-        return id(self._binding)
+        return id(self._js_obj)
 
     @property
     def inputs(self) -> AiTextToSpeechInput:
-        return _auto_to_py(self._binding.inputs)
+        return to_py(self._js_obj.inputs)
     
     @inputs.setter
     def inputs(self, value: AiTextToSpeechInput) -> None:
-        self._binding.inputs = value
+        self._js_obj.inputs = value
 
     @property
     def post_processed_outputs(self) -> AiTextToSpeechOutput:
-        return _auto_to_py(self._binding.postProcessedOutputs)
+        return to_py(self._js_obj.postProcessedOutputs)
     
     @post_processed_outputs.setter
     def post_processed_outputs(self, value: AiTextToSpeechOutput) -> None:
-        self._binding.postProcessedOutputs = value
+        self._js_obj.postProcessedOutputs = value
 
 
 class BaseAiTextToImage:
-    _binding: Any
+    _js_obj: Any
 
     @classmethod
     def from_js(cls, js_obj: JsProxy) -> BaseAiTextToImage:
         instance = object.__new__(cls)
-        instance._binding = js_obj
+        instance._js_obj = js_obj
         return instance
 
     @property
     def js_object(self) -> JsProxy:
-        return self._binding
+        return self._js_obj
 
     def __getattr__(self, name: str) -> Any:
-        return getattr(self._binding, name)
+        return getattr(self._js_obj, name)
 
     def __getitem__(self, key: str) -> Any:
         return getattr(self, key)
@@ -564,43 +564,43 @@ class BaseAiTextToImage:
         setattr(self, key, value)
 
     def __eq__(self, other: Any) -> bool:
-        return isinstance(other, self.__class__) and self._binding == other._binding
+        return isinstance(other, self.__class__) and self._js_obj == other._js_obj
 
     def __hash__(self) -> int:
-        return id(self._binding)
+        return id(self._js_obj)
 
     @property
     def inputs(self) -> AiTextToImageInput:
-        return _auto_to_py(self._binding.inputs)
+        return to_py(self._js_obj.inputs)
     
     @inputs.setter
     def inputs(self, value: AiTextToImageInput) -> None:
-        self._binding.inputs = value
+        self._js_obj.inputs = value
 
     @property
     def post_processed_outputs(self) -> Any:
-        return self._binding.postProcessedOutputs
+        return self._js_obj.postProcessedOutputs
     
     @post_processed_outputs.setter
     def post_processed_outputs(self, value: Any) -> None:
-        self._binding.postProcessedOutputs = value
+        self._js_obj.postProcessedOutputs = value
 
 
 class BaseAiTranslation:
-    _binding: Any
+    _js_obj: Any
 
     @classmethod
     def from_js(cls, js_obj: JsProxy) -> BaseAiTranslation:
         instance = object.__new__(cls)
-        instance._binding = js_obj
+        instance._js_obj = js_obj
         return instance
 
     @property
     def js_object(self) -> JsProxy:
-        return self._binding
+        return self._js_obj
 
     def __getattr__(self, name: str) -> Any:
-        return getattr(self._binding, name)
+        return getattr(self._js_obj, name)
 
     def __getitem__(self, key: str) -> Any:
         return getattr(self, key)
@@ -609,43 +609,43 @@ class BaseAiTranslation:
         setattr(self, key, value)
 
     def __eq__(self, other: Any) -> bool:
-        return isinstance(other, self.__class__) and self._binding == other._binding
+        return isinstance(other, self.__class__) and self._js_obj == other._js_obj
 
     def __hash__(self) -> int:
-        return id(self._binding)
+        return id(self._js_obj)
 
     @property
     def inputs(self) -> AiTranslationInput:
-        return _auto_to_py(self._binding.inputs)
+        return to_py(self._js_obj.inputs)
     
     @inputs.setter
     def inputs(self, value: AiTranslationInput) -> None:
-        self._binding.inputs = value
+        self._js_obj.inputs = value
 
     @property
     def post_processed_outputs(self) -> AiTranslationOutput:
-        return _auto_to_py(self._binding.postProcessedOutputs)
+        return to_py(self._js_obj.postProcessedOutputs)
     
     @post_processed_outputs.setter
     def post_processed_outputs(self, value: AiTranslationOutput) -> None:
-        self._binding.postProcessedOutputs = value
+        self._js_obj.postProcessedOutputs = value
 
 
 class Ai:
-    _binding: Any
+    _js_obj: Any
 
     @classmethod
     def from_js(cls, js_obj: JsProxy) -> Ai:
         instance = object.__new__(cls)
-        instance._binding = js_obj
+        instance._js_obj = js_obj
         return instance
 
     @property
     def js_object(self) -> JsProxy:
-        return self._binding
+        return self._js_obj
 
     def __getattr__(self, name: str) -> Any:
-        return getattr(self._binding, name)
+        return getattr(self._js_obj, name)
 
     def __getitem__(self, key: str) -> Any:
         return getattr(self, key)
@@ -654,18 +654,18 @@ class Ai:
         setattr(self, key, value)
 
     def __eq__(self, other: Any) -> bool:
-        return isinstance(other, self.__class__) and self._binding == other._binding
+        return isinstance(other, self.__class__) and self._js_obj == other._js_obj
 
     def __hash__(self) -> int:
-        return id(self._binding)
+        return id(self._js_obj)
 
     @property
     def ai_gateway_log_id(self) -> str | None:
-        return _jsnull_to_none(self._binding.aiGatewayLogId)
+        return _jsnull_to_none(self._js_obj.aiGatewayLogId)
     
     @ai_gateway_log_id.setter
     def ai_gateway_log_id(self, value: str | None) -> None:
-        self._binding.aiGatewayLogId = value
+        self._js_obj.aiGatewayLogId = value
 
     async def run(self, *args: Any, **kwargs: Any) -> Any:
         _a = list(args)
@@ -675,17 +675,17 @@ class Ai:
             _a[1] = to_js(_a[1])
         if len(_a) > 2:
             _a[2] = to_js(_a[2])
-        _r = await self._binding.run(*_a, **kwargs)
+        _r = await self._js_obj.run(*_a, **kwargs)
         if isinstance(args[1], str):
-            return _auto_to_py(_r)
+            return to_py(_r)
         elif isinstance(args[1], str):
-            return _auto_to_py(_r)
+            return to_py(_r)
         elif isinstance(args[1], str):
-            return _auto_to_py(_r)
+            return to_py(_r)
         return _r
 
     async def models(self, params: AiModelsSearchParams | None = None) -> list[AiModelsSearchObject]:
-        return [_auto_to_py(e) for e in await self._binding.models(to_js(params))]
+        return [to_py(e) for e in await self._js_obj.models(to_js(params))]
 
     async def to_markdown(self, *args: Any, **kwargs: Any) -> Any:
         _a = list(args)
@@ -693,31 +693,31 @@ class Ai:
             _a[0] = to_js(_a[0])
         if len(_a) > 1:
             _a[1] = to_js(_a[1])
-        _r = await self._binding.toMarkdown(*_a, **kwargs)
+        _r = await self._js_obj.toMarkdown(*_a, **kwargs)
         if len(args) <= 0:
             return ToMarkdownService.from_js(_r)
         elif isinstance(args[0], list):
-            return [_auto_to_py(e) for e in _r]
+            return [to_py(e) for e in _r]
         elif isinstance(args[0], str):
-            return _auto_to_py(_r)
+            return to_py(_r)
         return _r
 
 
 class ToMarkdownService:
-    _binding: Any
+    _js_obj: Any
 
     @classmethod
     def from_js(cls, js_obj: JsProxy) -> ToMarkdownService:
         instance = object.__new__(cls)
-        instance._binding = js_obj
+        instance._js_obj = js_obj
         return instance
 
     @property
     def js_object(self) -> JsProxy:
-        return self._binding
+        return self._js_obj
 
     def __getattr__(self, name: str) -> Any:
-        return getattr(self._binding, name)
+        return getattr(self._js_obj, name)
 
     def __getitem__(self, key: str) -> Any:
         return getattr(self, key)
@@ -726,10 +726,10 @@ class ToMarkdownService:
         setattr(self, key, value)
 
     def __eq__(self, other: Any) -> bool:
-        return isinstance(other, self.__class__) and self._binding == other._binding
+        return isinstance(other, self.__class__) and self._js_obj == other._js_obj
 
     def __hash__(self) -> int:
-        return id(self._binding)
+        return id(self._js_obj)
 
     async def transform(self, *args: Any, **kwargs: Any) -> Any:
         _a = list(args)
@@ -737,32 +737,32 @@ class ToMarkdownService:
             _a[0] = to_js(_a[0])
         if len(_a) > 1:
             _a[1] = to_js(_a[1])
-        _r = await self._binding.transform(*_a, **kwargs)
+        _r = await self._js_obj.transform(*_a, **kwargs)
         if isinstance(args[0], list):
-            return [_auto_to_py(e) for e in _r]
+            return [to_py(e) for e in _r]
         elif isinstance(args[0], str):
-            return _auto_to_py(_r)
+            return to_py(_r)
         return _r
 
     async def supported(self) -> list[SupportedFileFormat]:
-        return [_auto_to_py(e) for e in await self._binding.supported()]
+        return [to_py(e) for e in await self._js_obj.supported()]
 
 
 class AiModels:
-    _binding: Any
+    _js_obj: Any
 
     @classmethod
     def from_js(cls, js_obj: JsProxy) -> AiModels:
         instance = object.__new__(cls)
-        instance._binding = js_obj
+        instance._js_obj = js_obj
         return instance
 
     @property
     def js_object(self) -> JsProxy:
-        return self._binding
+        return self._js_obj
 
     def __getattr__(self, name: str) -> Any:
-        return getattr(self._binding, name)
+        return getattr(self._js_obj, name)
 
     def __getitem__(self, key: str) -> Any:
         return getattr(self, key)
@@ -771,10 +771,10 @@ class AiModels:
         setattr(self, key, value)
 
     def __eq__(self, other: Any) -> bool:
-        return isinstance(other, self.__class__) and self._binding == other._binding
+        return isinstance(other, self.__class__) and self._js_obj == other._js_obj
 
     def __hash__(self) -> int:
-        return id(self._binding)
+        return id(self._js_obj)
 
 
 class AiImageClassificationInput(TypedDict):
