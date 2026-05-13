@@ -2,6 +2,19 @@
   "name": "ts-to-pyodide",
   "version": "0.1.0",
   "description": "Generate Python runtime wrappers from TypeScript .d.ts files for Pyodide",
+  "keywords": [
+    "python",
+    "webassembly",
+    "pyodide"
+  ],
+  "homepage": "https://github.com/ryanking13/ts-to-pyodide",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ryanking13/ts-to-pyodide.git"
+  },
+  "bugs": {
+    "url": "https://github.com/ryanking13/ts-to-pyodide/issues"
+  },
   "license": "ISC",
   "type": "module",
   "bin": "dist/main.js",
