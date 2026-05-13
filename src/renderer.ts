@@ -180,7 +180,7 @@ export class Renderer {
 
     const lines = [
       `class ${className}:`,
-      "    _binding: Any",
+      "    _js_obj: Any",
     ];
 
     if (constructors && constructors.length > 0) {
@@ -192,15 +192,15 @@ export class Renderer {
       "    @classmethod",
       `    def from_js(cls, js_obj: JsProxy) -> ${className}:`,
       "        instance = object.__new__(cls)",
-      "        instance._binding = js_obj",
+      "        instance._js_obj = js_obj",
       "        return instance",
       "",
       "    @property",
       "    def js_object(self) -> JsProxy:",
-      "        return self._binding",
+      "        return self._js_obj",
       "",
       "    def __getattr__(self, name: str) -> Any:",
-      "        return getattr(self._binding, name)",
+      "        return getattr(self._js_obj, name)",
       "",
       "    def __getitem__(self, key: str) -> Any:",
       "        return getattr(self, key)",
@@ -209,10 +209,10 @@ export class Renderer {
       "        setattr(self, key, value)",
       "",
       "    def __eq__(self, other: Any) -> bool:",
-      "        return isinstance(other, self.__class__) and self._binding == other._binding",
+      "        return isinstance(other, self.__class__) and self._js_obj == other._js_obj",
       "",
       "    def __hash__(self) -> int:",
-      "        return id(self._binding)",
+      "        return id(self._js_obj)",
     );
 
     for (const prop of ir.properties) {
@@ -243,7 +243,7 @@ export class Renderer {
     return [
       "",
       `    def __init__(self, *args: Any, **kwargs: Any) -> None:`,
-      `        self._binding = js.${className}.new(*args, **kwargs)`,
+      `        self._js_obj = js.${className}.new(*args, **kwargs)`,
     ];
   }
 
@@ -311,7 +311,7 @@ export class Renderer {
     }
     const argList = argParts.join(", ");
 
-    let rawCall = jsMethodCall("self._binding", jsName, argList);
+    let rawCall = jsMethodCall("self._js_obj", jsName, argList);
     if (isAsync) {
       rawCall = `await ${rawCall}`;
     }
@@ -404,29 +404,29 @@ export class Renderer {
       case "wrapper":
         return `${wrapperClass}.from_js(${rawCall})` ;
       case "databag_nullable":
-        return `_auto_to_py(_jsnull_to_none(${rawCall}))`;
+        return `to_py(_jsnull_to_none(${rawCall}))`;
       case "databag":
-        return `_auto_to_py(${rawCall})`;
+        return `to_py(${rawCall})`;
       case "array_wrapper":
         return `[${arrayElemInfo!.className}.from_js(e) for e in ${rawCall}]`;
       case "array_databag":
-        return `[_auto_to_py(e) for e in ${rawCall}]`;
+        return `[to_py(e) for e in ${rawCall}]`;
       case "native_topy_nullable":
         return `${nativeToPyFn}(_jsnull_to_none(${rawCall}))`;
       case "native_topy":
         return `${nativeToPyFn}(${rawCall})`;
       case "auto_topy_nullable":
-        return `_auto_to_py(_jsnull_to_none(${rawCall}))`;
+        return `to_py(_jsnull_to_none(${rawCall}))`;
       case "auto_topy":
-        return `_auto_to_py(_jsnull_to_none(${rawCall}))`;
+        return `to_py(_jsnull_to_none(${rawCall}))`;
       case "topy_nullable":
-        return `_auto_to_py(_jsnull_to_none(${rawCall}))`;
+        return `to_py(_jsnull_to_none(${rawCall}))`;
       case "topy":
-        return `_auto_to_py(${rawCall})`;
+        return `to_py(${rawCall})`;
       case "nullable":
-        return `_auto_to_py(_jsnull_to_none(${rawCall}))`;
+        return `to_py(_jsnull_to_none(${rawCall}))`;
       default:
-        return `_auto_to_py(${rawCall})`;
+        return `to_py(${rawCall})`;
     }
   }
 
@@ -472,7 +472,7 @@ export class Renderer {
       }
     }
 
-    let rawCall = jsMethodCall("self._binding", jsName, `*${argVar}, **${kwVar}`);
+    let rawCall = jsMethodCall("self._js_obj", jsName, `*${argVar}, **${kwVar}`);
     if (anyAsync) rawCall = `await ${rawCall}`;
 
     if (uniformReturn) {
@@ -590,7 +590,7 @@ export class Renderer {
     }
 
     const wrapperClass = resolveKnownInterface(typeIR, this.knownInterfaces);
-    const rawExpr = jsAttrAccess("self._binding", jsName);
+    const rawExpr = jsAttrAccess("self._js_obj", jsName);
 
     const isDataBag = wrapperClass ? this.dataBagNames.has(wrapperClass) : false;
     const arrayElem = this.resolveArrayElement(typeIR);
@@ -607,13 +607,13 @@ export class Renderer {
     } else if (isDataBag && nullable) {
       getterBody =
         `    _v = _jsnull_to_none(${rawExpr})\n` +
-        `    return _auto_to_py(_v) if _v is not None else None`;
+        `    return to_py(_v) if _v is not None else None`;
     } else if (isDataBag) {
-      getterBody = `    return _auto_to_py(${rawExpr})`;
+      getterBody = `    return to_py(${rawExpr})`;
     } else if (arrayElem && !arrayElem.isDataBag) {
       getterBody = `    return [${arrayElem.className}.from_js(e) for e in ${rawExpr}]`;
     } else if (arrayElem && arrayElem.isDataBag) {
-      getterBody = `    return [_auto_to_py(e) for e in ${rawExpr}]`;
+      getterBody = `    return [to_py(e) for e in ${rawExpr}]`;
     } else if (nativeToPy && nullable) {
       getterBody =
         `    _v = _jsnull_to_none(${rawExpr})\n` +
@@ -623,9 +623,9 @@ export class Renderer {
     } else if (autoToPy && nullable) {
       getterBody =
         `    _v = _jsnull_to_none(${rawExpr})\n` +
-        `    return _auto_to_py(_v) if _v is not None else None`;
+        `    return to_py(_v) if _v is not None else None`;
     } else if (autoToPy) {
-      getterBody = `    return _auto_to_py(_jsnull_to_none(${rawExpr}))`;
+      getterBody = `    return to_py(_jsnull_to_none(${rawExpr}))`;
     } else if (toPy && nullable) {
       getterBody =
         `    _v = _jsnull_to_none(${rawExpr})\n` +
@@ -647,9 +647,9 @@ export class Renderer {
     if (!isReadonly) {
       let setterLine: string;
       if (PYTHON_RESERVED.has(jsName)) {
-        setterLine = `    setattr(self._binding, "${jsName}", value)`;
+        setterLine = `    setattr(self._js_obj, "${jsName}", value)`;
       } else {
-        setterLine = `    self._binding.${jsName} = value`;
+        setterLine = `    self._js_obj.${jsName} = value`;
       }
       lines.push(
         "",
@@ -701,18 +701,18 @@ export class Renderer {
     if (isDataBag && nullable) {
       return (
         `    _v = _jsnull_to_none(${rawCall})\n` +
-        `    return _auto_to_py(_v) if _v is not None else None`
+        `    return to_py(_v) if _v is not None else None`
       );
     }
     if (isDataBag) {
-      return `    return _auto_to_py(${rawCall})`;
+      return `    return to_py(${rawCall})`;
     }
     const arrayElem = this.resolveArrayElement(returns);
     if (arrayElem && !arrayElem.isDataBag) {
       return `    return [${arrayElem.className}.from_js(e) for e in ${rawCall}]`;
     }
     if (arrayElem && arrayElem.isDataBag) {
-      return `    return [_auto_to_py(e) for e in ${rawCall}]`;
+      return `    return [to_py(e) for e in ${rawCall}]`;
     }
     if (nativeToPy && nullable) {
       return (
@@ -726,11 +726,11 @@ export class Renderer {
     if (autoToPy && nullable) {
       return (
         `    _v = _jsnull_to_none(${rawCall})\n` +
-        `    return _auto_to_py(_v) if _v is not None else None`
+        `    return to_py(_v) if _v is not None else None`
       );
     }
     if (autoToPy) {
-      return `    return _auto_to_py(_jsnull_to_none(${rawCall}))`;
+      return `    return to_py(_jsnull_to_none(${rawCall}))`;
     }
     if (toPy && nullable) {
       return (

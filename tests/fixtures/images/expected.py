@@ -2,20 +2,20 @@ from __future__ import annotations
 from prelude import *
 
 class ImagesBinding:
-    _binding: Any
+    _js_obj: Any
 
     @classmethod
     def from_js(cls, js_obj: JsProxy) -> ImagesBinding:
         instance = object.__new__(cls)
-        instance._binding = js_obj
+        instance._js_obj = js_obj
         return instance
 
     @property
     def js_object(self) -> JsProxy:
-        return self._binding
+        return self._js_obj
 
     def __getattr__(self, name: str) -> Any:
-        return getattr(self._binding, name)
+        return getattr(self._js_obj, name)
 
     def __getitem__(self, key: str) -> Any:
         return getattr(self, key)
@@ -24,37 +24,37 @@ class ImagesBinding:
         setattr(self, key, value)
 
     def __eq__(self, other: Any) -> bool:
-        return isinstance(other, self.__class__) and self._binding == other._binding
+        return isinstance(other, self.__class__) and self._js_obj == other._js_obj
 
     def __hash__(self) -> int:
-        return id(self._binding)
+        return id(self._js_obj)
 
     @property
     def hosted(self) -> HostedImagesBinding:
-        return HostedImagesBinding.from_js(self._binding.hosted)
+        return HostedImagesBinding.from_js(self._js_obj.hosted)
 
     async def info(self, stream: JsProxy, options: ImageInputOptions | None = None) -> ImageInfoResponse:
-        return _auto_to_py(await self._binding.info(to_js(stream), to_js(options)))
+        return to_py(await self._js_obj.info(to_js(stream), to_js(options)))
 
     def input(self, stream: JsProxy, options: ImageInputOptions | None = None) -> ImageTransformer:
-        return ImageTransformer.from_js(self._binding.input(to_js(stream), to_js(options)))
+        return ImageTransformer.from_js(self._js_obj.input(to_js(stream), to_js(options)))
 
 
 class ImageTransformer:
-    _binding: Any
+    _js_obj: Any
 
     @classmethod
     def from_js(cls, js_obj: JsProxy) -> ImageTransformer:
         instance = object.__new__(cls)
-        instance._binding = js_obj
+        instance._js_obj = js_obj
         return instance
 
     @property
     def js_object(self) -> JsProxy:
-        return self._binding
+        return self._js_obj
 
     def __getattr__(self, name: str) -> Any:
-        return getattr(self._binding, name)
+        return getattr(self._js_obj, name)
 
     def __getitem__(self, key: str) -> Any:
         return getattr(self, key)
@@ -63,36 +63,36 @@ class ImageTransformer:
         setattr(self, key, value)
 
     def __eq__(self, other: Any) -> bool:
-        return isinstance(other, self.__class__) and self._binding == other._binding
+        return isinstance(other, self.__class__) and self._js_obj == other._js_obj
 
     def __hash__(self) -> int:
-        return id(self._binding)
+        return id(self._js_obj)
 
     def transform(self, transform: ImageTransform) -> ImageTransformer:
-        return ImageTransformer.from_js(self._binding.transform(to_js(transform)))
+        return ImageTransformer.from_js(self._js_obj.transform(to_js(transform)))
 
     def draw(self, image: JsProxy | ImageTransformer, options: ImageDrawOptions | None = None) -> ImageTransformer:
-        return ImageTransformer.from_js(self._binding.draw(to_js(image), to_js(options)))
+        return ImageTransformer.from_js(self._js_obj.draw(to_js(image), to_js(options)))
 
     async def output(self, options: ImageOutputOptions) -> ImageTransformationResult:
-        return ImageTransformationResult.from_js(await self._binding.output(to_js(options)))
+        return ImageTransformationResult.from_js(await self._js_obj.output(to_js(options)))
 
 
 class HostedImagesBinding:
-    _binding: Any
+    _js_obj: Any
 
     @classmethod
     def from_js(cls, js_obj: JsProxy) -> HostedImagesBinding:
         instance = object.__new__(cls)
-        instance._binding = js_obj
+        instance._js_obj = js_obj
         return instance
 
     @property
     def js_object(self) -> JsProxy:
-        return self._binding
+        return self._js_obj
 
     def __getattr__(self, name: str) -> Any:
-        return getattr(self._binding, name)
+        return getattr(self._js_obj, name)
 
     def __getitem__(self, key: str) -> Any:
         return getattr(self, key)
@@ -101,36 +101,36 @@ class HostedImagesBinding:
         setattr(self, key, value)
 
     def __eq__(self, other: Any) -> bool:
-        return isinstance(other, self.__class__) and self._binding == other._binding
+        return isinstance(other, self.__class__) and self._js_obj == other._js_obj
 
     def __hash__(self) -> int:
-        return id(self._binding)
+        return id(self._js_obj)
 
     def image(self, image_id: str) -> ImageHandle:
-        return ImageHandle.from_js(self._binding.image(image_id))
+        return ImageHandle.from_js(self._js_obj.image(image_id))
 
     async def upload(self, image: JsProxy | JsBuffer, options: ImageUploadOptions | None = None) -> ImageMetadata:
-        return _auto_to_py(await self._binding.upload(to_js(image), to_js(options)))
+        return to_py(await self._js_obj.upload(to_js(image), to_js(options)))
 
     async def list(self, options: ImageListOptions | None = None) -> ImageList:
-        return _auto_to_py(await self._binding.list(to_js(options)))
+        return to_py(await self._js_obj.list(to_js(options)))
 
 
 class ImageTransformationResult:
-    _binding: Any
+    _js_obj: Any
 
     @classmethod
     def from_js(cls, js_obj: JsProxy) -> ImageTransformationResult:
         instance = object.__new__(cls)
-        instance._binding = js_obj
+        instance._js_obj = js_obj
         return instance
 
     @property
     def js_object(self) -> JsProxy:
-        return self._binding
+        return self._js_obj
 
     def __getattr__(self, name: str) -> Any:
-        return getattr(self._binding, name)
+        return getattr(self._js_obj, name)
 
     def __getitem__(self, key: str) -> Any:
         return getattr(self, key)
@@ -139,36 +139,36 @@ class ImageTransformationResult:
         setattr(self, key, value)
 
     def __eq__(self, other: Any) -> bool:
-        return isinstance(other, self.__class__) and self._binding == other._binding
+        return isinstance(other, self.__class__) and self._js_obj == other._js_obj
 
     def __hash__(self) -> int:
-        return id(self._binding)
+        return id(self._js_obj)
 
     def response(self) -> Any:
-        return self._binding.response()
+        return self._js_obj.response()
 
     def content_type(self) -> str:
-        return self._binding.contentType()
+        return self._js_obj.contentType()
 
     def image(self, options: ImageTransformationOutputOptions | None = None) -> JsProxy:
-        return self._binding.image(to_js(options))
+        return self._js_obj.image(to_js(options))
 
 
 class ImageHandle:
-    _binding: Any
+    _js_obj: Any
 
     @classmethod
     def from_js(cls, js_obj: JsProxy) -> ImageHandle:
         instance = object.__new__(cls)
-        instance._binding = js_obj
+        instance._js_obj = js_obj
         return instance
 
     @property
     def js_object(self) -> JsProxy:
-        return self._binding
+        return self._js_obj
 
     def __getattr__(self, name: str) -> Any:
-        return getattr(self._binding, name)
+        return getattr(self._js_obj, name)
 
     def __getitem__(self, key: str) -> Any:
         return getattr(self, key)
@@ -177,23 +177,23 @@ class ImageHandle:
         setattr(self, key, value)
 
     def __eq__(self, other: Any) -> bool:
-        return isinstance(other, self.__class__) and self._binding == other._binding
+        return isinstance(other, self.__class__) and self._js_obj == other._js_obj
 
     def __hash__(self) -> int:
-        return id(self._binding)
+        return id(self._js_obj)
 
     async def details(self) -> ImageMetadata | None:
-        _v = _jsnull_to_none(await self._binding.details())
-        return _auto_to_py(_v) if _v is not None else None
+        _v = _jsnull_to_none(await self._js_obj.details())
+        return to_py(_v) if _v is not None else None
 
     async def bytes(self) -> JsProxy | None:
-        return _jsnull_to_none(await self._binding.bytes())
+        return _jsnull_to_none(await self._js_obj.bytes())
 
     async def update(self, options: ImageUpdateOptions) -> ImageMetadata:
-        return _auto_to_py(await self._binding.update(to_js(options)))
+        return to_py(await self._js_obj.update(to_js(options)))
 
     async def delete(self) -> bool:
-        return await self._binding.delete()
+        return await self._js_obj.delete()
 
 
 class ImageUploadOptions(TypedDict, total=False):

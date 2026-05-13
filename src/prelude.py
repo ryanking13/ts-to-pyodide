@@ -13,14 +13,14 @@ __all__ = [
     "Any", "Literal", "Never", "TypedDict", "overload",
     "js", "JsBuffer", "JsProxy", "create_proxy", "to_js",
     "datetime", "timezone",
-    "_jsnull_to_none", "_auto_to_py", "_none_to_jsnull",
+    "_jsnull_to_none", "to_py", "_none_to_jsnull",
     "_to_js_date", "_from_js_date",
     "Headers",
 ]
 
 def to_js(obj: Any, **kwargs: Any) -> Any:
-    if hasattr(obj, "_binding"):
-        return obj._binding
+    if hasattr(obj, "_js_obj"):
+        return obj._js_obj
     if "dict_converter" not in kwargs:
         kwargs["dict_converter"] = js.Object.fromEntries
     return _raw_to_js(obj, **kwargs)
@@ -30,16 +30,16 @@ def _jsnull_to_none(value: Any) -> Any:
         return None
     return value
 
-def _auto_to_py(value: Any) -> Any:
+def to_py(value: Any) -> Any:
     if isinstance(value, JsProxy):
         try:
             value = value.to_py()
         except Exception:
             return value
     if isinstance(value, dict):
-        return {k: _auto_to_py(_jsnull_to_none(v)) for k, v in value.items()}
+        return {k: to_py(_jsnull_to_none(v)) for k, v in value.items()}
     if isinstance(value, list):
-        return [_auto_to_py(_jsnull_to_none(v)) for v in value]
+        return [to_py(_jsnull_to_none(v)) for v in value]
     return value
 
 def _none_to_jsnull(value: Any) -> Any:
@@ -56,59 +56,59 @@ def _from_js_date(js_date: Any) -> datetime:
     return datetime.fromtimestamp(js_date.getTime() / 1000, tz=timezone.utc)
 
 class Headers:
-    _binding: Any
+    _js_obj: Any
 
     def __init__(self, init: dict[str, str] | list[tuple[str, str]] | JsProxy | Headers | None = None) -> None:
         if init is None:
-            self._binding = js.Headers.new()
+            self._js_obj = js.Headers.new()
         elif isinstance(init, Headers):
-            self._binding = init._binding
+            self._js_obj = init._js_obj
         elif isinstance(init, dict):
-            self._binding = js.Headers.new(to_js(list(init.items())))
+            self._js_obj = js.Headers.new(to_js(list(init.items())))
         elif isinstance(init, list):
-            self._binding = js.Headers.new(to_js(init))
+            self._js_obj = js.Headers.new(to_js(init))
         else:
-            self._binding = init
+            self._js_obj = init
 
     @classmethod
     def from_js(cls, js_obj: JsProxy) -> Headers:
         instance = object.__new__(cls)
-        instance._binding = js_obj
+        instance._js_obj = js_obj
         return instance
 
     @property
     def js_object(self) -> JsProxy:
-        return self._binding
+        return self._js_obj
 
     def get(self, name: str) -> str | None:
-        return _jsnull_to_none(self._binding.get(name))
+        return _jsnull_to_none(self._js_obj.get(name))
 
     def get_all(self, name: str) -> list[str]:
-        return list(self._binding.getAll(name))
+        return list(self._js_obj.getAll(name))
 
     def has(self, name: str) -> bool:
-        return self._binding.has(name)
+        return self._js_obj.has(name)
 
     def set(self, name: str, value: str) -> None:
-        self._binding.set(name, value)
+        self._js_obj.set(name, value)
 
     def append(self, name: str, value: str) -> None:
-        self._binding.append(name, value)
+        self._js_obj.append(name, value)
 
     def delete(self, name: str) -> None:
-        self._binding.delete(name)
+        self._js_obj.delete(name)
 
     def entries(self) -> list[tuple[str, str]]:
-        return list(self._binding.entries())
+        return list(self._js_obj.entries())
 
     def keys(self) -> list[str]:
-        return list(self._binding.keys())
+        return list(self._js_obj.keys())
 
     def values(self) -> list[str]:
-        return list(self._binding.values())
+        return list(self._js_obj.values())
 
     def to_dict(self) -> dict[str, str]:
-        return dict(self._binding.entries())
+        return dict(self._js_obj.entries())
 
     def __iter__(self) -> Any:
         return iter(self.entries())
@@ -123,7 +123,7 @@ class Headers:
         return f"Headers({self.to_dict()!r})"
 
     def __eq__(self, other: Any) -> bool:
-        return isinstance(other, Headers) and self._binding == other._binding
+        return isinstance(other, Headers) and self._js_obj == other._js_obj
 
     def __hash__(self) -> int:
-        return id(self._binding)
+        return id(self._js_obj)

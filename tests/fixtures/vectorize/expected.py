@@ -2,20 +2,20 @@ from __future__ import annotations
 from prelude import *
 
 class Vectorize:
-    _binding: Any
+    _js_obj: Any
 
     @classmethod
     def from_js(cls, js_obj: JsProxy) -> Vectorize:
         instance = object.__new__(cls)
-        instance._binding = js_obj
+        instance._js_obj = js_obj
         return instance
 
     @property
     def js_object(self) -> JsProxy:
-        return self._binding
+        return self._js_obj
 
     def __getattr__(self, name: str) -> Any:
-        return getattr(self._binding, name)
+        return getattr(self._js_obj, name)
 
     def __getitem__(self, key: str) -> Any:
         return getattr(self, key)
@@ -24,31 +24,31 @@ class Vectorize:
         setattr(self, key, value)
 
     def __eq__(self, other: Any) -> bool:
-        return isinstance(other, self.__class__) and self._binding == other._binding
+        return isinstance(other, self.__class__) and self._js_obj == other._js_obj
 
     def __hash__(self) -> int:
-        return id(self._binding)
+        return id(self._js_obj)
 
     async def describe(self) -> VectorizeIndexInfo:
-        return _auto_to_py(await self._binding.describe())
+        return to_py(await self._js_obj.describe())
 
     async def query(self, vector: Any | list[int | float], options: VectorizeQueryOptions | None = None) -> VectorizeMatches:
-        return _auto_to_py(await self._binding.query(to_js(vector), to_js(options)))
+        return to_py(await self._js_obj.query(to_js(vector), to_js(options)))
 
     async def query_by_id(self, vector_id: str, options: VectorizeQueryOptions | None = None) -> VectorizeMatches:
-        return _auto_to_py(await self._binding.queryById(vector_id, to_js(options)))
+        return to_py(await self._js_obj.queryById(vector_id, to_js(options)))
 
     async def insert(self, vectors: list[VectorizeVector]) -> VectorizeAsyncMutation:
-        return _auto_to_py(await self._binding.insert(to_js(vectors)))
+        return to_py(await self._js_obj.insert(to_js(vectors)))
 
     async def upsert(self, vectors: list[VectorizeVector]) -> VectorizeAsyncMutation:
-        return _auto_to_py(await self._binding.upsert(to_js(vectors)))
+        return to_py(await self._js_obj.upsert(to_js(vectors)))
 
     async def delete_by_ids(self, ids: list[str]) -> VectorizeAsyncMutation:
-        return _auto_to_py(await self._binding.deleteByIds(to_js(ids)))
+        return to_py(await self._js_obj.deleteByIds(to_js(ids)))
 
     async def get_by_ids(self, ids: list[str]) -> list[VectorizeVector]:
-        return [_auto_to_py(e) for e in await self._binding.getByIds(to_js(ids))]
+        return [to_py(e) for e in await self._js_obj.getByIds(to_js(ids))]
 
 
 class VectorizeIndexInfo(TypedDict):

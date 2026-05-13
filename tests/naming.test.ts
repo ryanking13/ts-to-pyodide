@@ -94,15 +94,15 @@ describe("stripIfaceSuffix", () => {
 describe("jsAttrAccess", () => {
   it("normal name", () => {
     assert.strictEqual(
-      jsAttrAccess("self._binding", "host"),
-      "self._binding.host",
+      jsAttrAccess("self._js_obj", "host"),
+      "self._js_obj.host",
     );
   });
 
   it("reserved word uses getattr", () => {
     assert.strictEqual(
-      jsAttrAccess("self._binding", "from"),
-      'getattr(self._binding, "from")',
+      jsAttrAccess("self._js_obj", "from"),
+      'getattr(self._js_obj, "from")',
     );
   });
 
@@ -114,29 +114,29 @@ describe("jsAttrAccess", () => {
 describe("jsMethodCall", () => {
   it("normal name", () => {
     assert.strictEqual(
-      jsMethodCall("self._binding", "get", "key"),
-      "self._binding.get(key)",
+      jsMethodCall("self._js_obj", "get", "key"),
+      "self._js_obj.get(key)",
     );
   });
 
   it("no args", () => {
     assert.strictEqual(
-      jsMethodCall("self._binding", "close", ""),
-      "self._binding.close()",
+      jsMethodCall("self._js_obj", "close", ""),
+      "self._js_obj.close()",
     );
   });
 
   it("reserved word uses getattr", () => {
     assert.strictEqual(
-      jsMethodCall("self._binding", "del", ""),
-      'getattr(self._binding, "del")()',
+      jsMethodCall("self._js_obj", "del", ""),
+      'getattr(self._js_obj, "del")()',
     );
   });
 
   it("multiple args", () => {
     assert.strictEqual(
-      jsMethodCall("self._binding", "put", "key, value"),
-      "self._binding.put(key, value)",
+      jsMethodCall("self._js_obj", "put", "key, value"),
+      "self._js_obj.put(key, value)",
     );
   });
 });

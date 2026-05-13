@@ -403,7 +403,7 @@ describe("e2e: constructor support", () => {
 
     assert.ok(output.includes("class HTMLRewriter:"));
     assert.ok(output.includes("def __init__(self, *args: Any, **kwargs: Any) -> None:"));
-    assert.ok(output.includes("self._binding = js.HTMLRewriter.new(*args, **kwargs)"));
+    assert.ok(output.includes("self._js_obj = js.HTMLRewriter.new(*args, **kwargs)"));
     assert.ok(output.includes("def from_js(cls, js_obj: JsProxy) -> HTMLRewriter:"));
     assert.ok(output.includes("def on(self"));
   });
@@ -437,7 +437,7 @@ describe("e2e: constructor support", () => {
 
     assert.ok(output.includes("class Request:"));
     assert.ok(output.includes("def __init__(self, *args: Any, **kwargs: Any) -> None:"));
-    assert.ok(output.includes("self._binding = js.Request.new(*args, **kwargs)"));
+    assert.ok(output.includes("self._js_obj = js.Request.new(*args, **kwargs)"));
     assert.ok(output.includes("def url(self) -> str:"));
   });
 
